@@ -18,6 +18,9 @@ hdr = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML,
        'Accept-Language': 'en-US,en;q=0.8', #cambia idioma 'Accept-Language': 'es-ES,es;q=0.8' 	
        'Connection': 'keep-alive'}
 
+## measure scraping duration
+start = time.time()
+
 ## scraping
 count=0
 with open(outputpath, "w") as outfile:
@@ -172,3 +175,8 @@ with open(outputpathrev, "w") as outfile:
             writer.writerow([row['id'],row['name'],row['host_id'],row['host_name'],row['neighbourhood_group'],row['neighbourhood'],row['latitude'],row['longitude'],row['room_type'],row['price'],row['minimum_nights'],row['number_of_reviews'],row['last_review'],row['reviews_per_month'],row['calculated_host_listings_count'],row['availability_365'],nreviews,lastreview,exists])
             print "Data saved."
     
+## measure scraping duration
+end = time.time()
+print("Scraping duration in seconds:")
+print(end - start)
+
