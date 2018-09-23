@@ -1,0 +1,135 @@
+---
+title: "Comparando bases de datos"
+output: html_document
+---
+
+Este documento generado con Rmarkdown ([/analisis/compare-datasets.Rmd](https://github.com/montera34/airbnb.barcelona/blob/master/analisis/compare-datasets.Rmd)) está pensado para comparar dos bases de datos de Airbnb y poder evaluar los métodos de scraping.  
+
+```{r setup, include=FALSE, cache = TRUE}
+
+# Instala y carga librerías
+library(tidyverse)
+library(gsumfn)
+library(ggmap)
+
+# Carga datos
+
+# introduce el path de tu archivo listings. Necesitas desactivar Quotes, porque el texto incluye \"
+listings_dh <- read.delim("../data/original/airbnb/180619/barcelona_airbnb_datahippo.csv",sep = ",")
+listings_ia <- read.delim("../data/original/airbnb/180818/listings_summary_barcelona_insideairbnb.csv",sep = ",")
+
+```
+
++ **Data Hippo** (DH) contiene `r nrow(listings_dh)` anuncios en Barcelona (https://github.com/montera34/airbnb.barcelona/blob/master/data/original/airbnb/180619/barcelona_airbnb_datahippo.csv).
++ **Inside Airbnb** (IA) contienen `r nrow(listings_ia)` anuncios en Barcelona (https://github.com/montera34/airbnb.barcelona/blob/master/data/original/airbnb/180818/listings_summary_barcelona_insideairbnb.csv).
+
+¿Qué anuncios tienen en común? ¿cuáles no?
+
+## Éstas son las bases de datos sobre el mapa
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+
+qmplot(longitude, latitude, data = listings_dh, maptype = "toner-lite", color = I("red"),alpha = I(.2)) + labs(title= "DB1: data set 1" )
+
+qmplot(longitude, latitude, data = listings_ia, maptype = "toner-lite", color = I("blue"),alpha = I(.2)) + labs(title= "DB2: data set 2" )
+```
+
+## Comparando datasets
+
+```{r, echo = FALSE, warning=FALSE}
+# de dh que no están en ia
+listings_dh$airbnb_id <- as.numeric(strapplyc( as.character(listings_dh$url), "([0-9]+", simplify = TRUE))
+dh_not_in_ia <- listings_dh[!(listings_dh$airbnb_id %in% listings_ia$id),]
+dh_in_ia <- listings_dh[listings_dh$airbnb_id %in% listings_ia$id,]
+# de ia que no están en dh
+ia_not_in_dh <- listings_ia[!(listings_ia$id %in% listings_dh$airbnb_id),]
+ia_in_dh <- listings_ia[listings_ia$id %in% listings_dh$airbnb_id,]
+```
+
+
+```{r unique_ids, include=FALSE, cache = FALSE}
+unique_listings_dh <- as.data.frame(listings_dh$airbnb_id)
+names(unique_listings_dh)<-c("airbnb_id")
+
+unique_listings_ia <- as.data.frame(listings_ia$id)
+names(unique_listings_ia)<-c("id")
+
+unique_listings_p <- rbind(unique_listings_dh, unique_listings_ia)
+
+# unique(listings_dh$id)
+unique_listings <- as.data.frame(unique(unique_listings_p$id))
+```
+
+DH tiene **`r nrow(listings_dh)`** anuncios.
+
+IA tiene **`r nrow(listings_ia)`** anuncios.
+
+A. DH e IA tienen **`r nrow(dh_in_ia)`** anuncios comunes.
+
+B. DH tiene **`r nrow(dh_not_in_ia)`** anuncios que no están en la IA.
+
+C. IA tiene **`r nrow(ia_not_in_dh)`** anuncios que no están en la DH.
+
+Hay, por tanto **`r nrow(dh_not_in_ia) + nrow(ia_not_in_dh) + nrow(ia_in_dh)` anuncios ** (A + B + C) diferentes en total entre las dos bases de datos. Que concuerda con el valor `r nrow(unique_listings)`, que son el número de valores de id únicos entre DH e IA.
+
+DH tiene **`r format(round(100*(nrow(listings_dh)/nrow(unique_listings)), 1))`%** de los anuncios combinados de las dos bases de datos.
+
+AI tiene **`r format(round(100*(nrow(listings_ia)/nrow(unique_listings)), 1))`% **de los anuncios combinados de las dos bases de datos.
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+qmplot(longitude, latitude, data = dh_not_in_ia, maptype = "toner-lite", color = I("red"),alpha = I(.2)) + labs(title= "anuncios DH que no están en data set IA" )
+
+qmplot(longitude, latitude, data = ia_not_in_dh, maptype = "toner-lite", color = I("blue"),alpha = I(.2)) + labs(title= "anuncios IA que no están en DH" )
+```
+
+## Los datos
+
+### Data Hippo
+
++ http://datahippo.org/en/region/599230b08a46554edf884665/
+
++ Fecha scraping: 2018-06-19
+
+### Inside AirBnB
+
++ http://data.insideairbnb.com/spain/catalonia/barcelona/2018-08-14/visualisations/listings.csv
+
++ Fecha scraping: 2018-08-14
+
+```{r, echo = FALSE, warning=FALSE}
+
+# Merge datasets
+
+dh_not_in_ia$name <- ""
+dh_not_id_ia$host_name <- ""
+dh_not_id_ia$neighbourhood_group <- ""
+dh_not_id_ia$neighbourhood <- ""
+dh_not_id_ia$last_review <- ""
+dh_not_id_ia$reviews_per_month <- ""
+dh_not_id_ia$calculated_host_listings_count <- ""
+dh_not_id_ia$availability_365 <- ""
+
+dh_not_in_ia_adapted <- dh_not_in_ia[,c(14,15,7,16,17,18,3,4,8,13,12,11,19,20,21,22)]
+
+# change name of variables
+names(dh_not_in_ia_adapted)<-c(names(listings_ia))
+
+ia_in_dh$price <- as.numeric(as.character(ia_in_dh$price))
+ia_not_in_dh$price <- as.numeric(as.character(ia_not_in_dh$price))
+dh_not_in_ia_adapted$price <- as.numeric(as.character(dh_not_in_ia_adapted$price))
+  
+  
+temp <- rbind(ia_in_dh,ia_not_in_dh)
+temp$price  <- as.integer(temp$price)
+# Merge datasets
+complete_dataset <- rbind(temp,dh_not_in_ia_adapted)
+
+# Converts to character, uniform name of values, convert to fator again
+complete_dataset$room_type <- as.character(complete_dataset$room_type)
+complete_dataset$room_type[complete_dataset$room_type == "private_room"] <- "Private Room"
+complete_dataset$room_type[complete_dataset$room_type == "entire_home"] <- "Entire home/apt"
+complete_dataset$room_type <- as.factor(complete_dataset$room_type)
+# levels(complete_dataset$room_type)
+
+write.table(complete_dataset, "../data/output/airbnb/180818/listings_barcelona_dh_ia.csv", sep=",", row.names=FALSE)
+```
