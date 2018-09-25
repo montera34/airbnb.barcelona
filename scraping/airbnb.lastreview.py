@@ -6,11 +6,11 @@ from datetime import datetime
 import re
  
 inputfilename = "listings_barcelona_dh_ia.csv" # nombre del archivo con los ids de los listings, uno por linea
-inputpath = "../data/output/airbnb/180818/"+inputfilename # nombre del archivo con los ids de los listings, uno por linea
+inputpath = "../data/output/airbnb/180911/"+inputfilename # nombre del archivo con los ids de los listings, uno por linea
 today = datetime.now().date().strftime("%Y%m%d")
 outputfilename = inputfilename.replace(".csv","")+"_with-last-review-"+today+".csv"
-outputpath = "../data/output/airbnb/180818/"+outputfilename
-outputpathrev = "../data/output/airbnb/180818/"+outputfilename.replace(".csv","")+"-reviewed.csv" # nombre del archivo para guardar las URLs que existen, tienen reviews pero hayan dado algun problema y no se hayan descargado
+outputpath = "../data/output/airbnb/180911/"+outputfilename
+outputpathrev = "../data/output/airbnb/180911/"+outputfilename.replace(".csv","")+"-reviewed.csv" # nombre del archivo para guardar las URLs que existen, tienen reviews pero hayan dado algun problema y no se hayan descargado
 hdr = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
@@ -26,7 +26,7 @@ count=0
 with open(outputpath, "w") as outfile:
     
     writer = csv.writer(outfile)
-    writer.writerow(['id','name','host_id','host_name','neighbourhood_group','neighbourhood','latitude','longitude','room_type','price','minimum_nights','number_of_reviews','last_review','reviews_per_month','calculated_host_listings_count','availability_365','url','reviews_'+today,'lastreview_'+today,'exists_'+today])
+    writer.writerow(['id','name','host_id','host_name','neighbourhood_group','neighbourhood','latitude','longitude','room_type','price','minimum_nights','number_of_reviews','last_review','reviews_per_month','calculated_host_listings_count','availability_365','reviews_'+today,'lastreview_'+today,'exists_'+today])
     with open(inputpath, "r") as f:
         csvf = csv.DictReader(f, delimiter=',')
         for row in csvf:
@@ -101,7 +101,7 @@ count=0
 with open(outputpathrev, "w") as outfile:
     
     writer = csv.writer(outfile)
-    writer.writerow(['id','name','host_id','host_name','neighbourhood_group','neighbourhood','latitude','longitude','room_type','price','minimum_nights','number_of_reviews','last_review','reviews_per_month','calculated_host_listings_count','availability_365','url','reviews_'+today,'lastreview_'+today,'exists_'+today])
+    writer.writerow(['id','name','host_id','host_name','neighbourhood_group','neighbourhood','latitude','longitude','room_type','price','minimum_nights','number_of_reviews','last_review','reviews_per_month','calculated_host_listings_count','availability_365','reviews_'+today,'lastreview_'+today,'exists_'+today])
     with open(outputpath, "r") as f:
         csvf = csv.DictReader(f, delimiter=',')
         for row in csvf:
@@ -118,7 +118,7 @@ with open(outputpathrev, "w") as outfile:
                 time.sleep(3)
                 print ""
                 print count
-                url = row['url']
+                url = "https://www.airbnb.com/rooms/"+row['id']
                 print url
 
                 try:
