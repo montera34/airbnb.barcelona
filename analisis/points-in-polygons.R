@@ -2,7 +2,7 @@
 # count points in polygons: https://gis.stackexchange.com/questions/110117/counts-the-number-of-points-in-a-polygon-in-r#110246
 # read GeoJSON in R https://stackoverflow.com/questions/24183007/is-it-possible-to-read-geojson-or-topojson-file-in-r-to-draw-a-choropleth-map
 
-#  Lodas libraries
+# Loads libraries ----
 library("raster")
 library("sp")
 # restart R .rs.restartR() if rgdal does not work
@@ -11,7 +11,7 @@ library(rgdal)
 # check ogr drivers to see if GeoJSON is loaded:
 # ogrDrivers()
 
-## read files
+# read files ----
 
 # shapes
 barrios <- readOGR("data/original/contornos/barrios_geo.json")
@@ -20,8 +20,18 @@ distritos <- readOGR("data/original/contornos/distritos_geo.json")
 # plot(distritos) # plots the shape map
 # proj4string(distritos) # check CRS
 
+# Use this for municipios
+# shape of municipalities from IGN
+municipios <- readOGR("data/original/contornos/recintos_municipales_inspire_peninbal_wgs84_export_provincia-barcelona_geo.json")
+barrios <- municipios
+
 # points
-airbnb <- read.delim("data/original/airbnb/180619/barcelona_airbnb_datahippo.csv",sep = ",")
+# airbnb <- read.delim("data/original/airbnb/180619/barcelona_airbnb_datahippo.csv",sep = ",")
+# airbnb <- read.delim("data/original/airbnb/180619/barcelona_homeaw_datahippo.csv",sep = ",")
+airbnb <- read.delim("data/original/airbnb/180619/barcelona_provincia_airbnb_datahippo.csv",sep = ",")
+# airbnb <- read.delim("data/original/airbnb/180818/listings_summary_barcelona_insideairbnb.csv",sep = ",")
+
+# Prepares and counts ----
 
 ## Get long and lat from your data.frame. Make sure that the order is in lon/lat.
 # source: https://stackoverflow.com/questions/29736577/how-to-convert-data-frame-to-spatial-coordinates#29736844
@@ -44,15 +54,21 @@ countdistritos <- over(airbnbSp, distritos)
 
 # Adds calculated barrios to spatial poligon
 airbnbSp$barrio <- countBarrios$N_Barri
+airbnbSp$barrio <- countBarrios$NAMEUNIT # para municipios
 airbnbSp$distrito <- countdistritos$N_Distri
 
-# Where are those points without barrio
+# Maps: Where are those points without barrio ----
 library(ggmap)
 # Quedan fuera todos los anuncios que corrresponden a barcos del puerto olímpico!!!
 qmplot(longitude, latitude, data = airbnb[is.na(airbnbSp$barrio =="no location"),], maptype = "toner-lite", 
        color = I("red"),alpha = I(.2)) + labs(title= "Points without barrio" )
+# cuántos sin barrio?
+nrow(airbnb[is.na(airbnbSp$barrio =="no location"),])
+# plot todos los anuncios en mapa
 qmplot(longitude, latitude, data = airbnb, maptype = "toner-lite", 
-       color = I("red"),alpha = I(.2)) + labs(title= "Points without barrio" )
+       color = I("red"),alpha = I(.2)) + labs(title= "Points with barrio" )
+
+# Continues transformation ----
 
 airbnb <- as.data.frame(airbnbSp) # convert spatial data to regular data frame
 
@@ -75,6 +91,11 @@ length(airbnb[is.na(airbnbSp$barrio),]$name)
 # airbnb[is.na(airbnbSp$menores),]$distrito <- "no location"
 # airbnb[airbnb$distrito == "Sag�es" ,]$distrito <- "Sagües"
 
-# saves file
+
+# Para municipios ----
+# Cambia nombre de variable "Barrio" por "Municipio"
+names(airbnb)[14] <- "municipio"
+
+# saves file -----
 # save(airbnb,file="data/output/180423_listings-airbnb-donostia_datahippo_barrio-umenor.Rda")
-write.csv(airbnb, file = "data/output/airbnb/180619_listings-airbnb-baracelona_datahippo_barrio-distrito.csv", row.names = FALSE)
+write.csv(airbnb, file = "data/output/airbnb/180619_listings-airbnb-provincia-barcelona_datahippo_municipio.csv", row.names = FALSE)
