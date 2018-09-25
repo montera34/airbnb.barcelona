@@ -114,7 +114,7 @@ with open(outputpathrev, "w") as outfile:
             count +=1
 
             # comprobacion de registro fallido y rescrapeo si dio fallo
-            if row['exists_'+today] == '1' and row['reviews'] != '0' and row['reviews_'+today] == '0':
+            if row['exists_'+today] == '1' and row['number_of_reviews'] != '0' and row['reviews_'+today] == '0':
                 time.sleep(3)
                 print ""
                 print count
@@ -166,7 +166,6 @@ with open(outputpathrev, "w") as outfile:
                     print "URL not found :("
 
             else:
-                url = row['url']
                 exists = row['exists_'+today]
                 nreviews = row['reviews_'+today]
                 lastreview = row['lastreview_'+today]
