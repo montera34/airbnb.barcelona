@@ -10,7 +10,7 @@ inputpath = "../data/output/airbnb/180818/"+inputfilename # nombre del archivo c
 today = datetime.now().date().strftime("%Y%m%d")
 outputfilename = inputfilename.replace(".csv","")+"_with-last-review-"+today+".csv"
 outputpath = "../data/output/airbnb/180818/"+outputfilename
-outputpathrev = "../data/output/"+outputfilename.replace(".csv","")+"-reviewed.csv" # nombre del archivo para guardar las URLs que existen, tienen reviews pero hayan dado algun problema y no se hayan descargado
+outputpathrev = "../data/output/airbnb/180818/"+outputfilename.replace(".csv","")+"-reviewed.csv" # nombre del archivo para guardar las URLs que existen, tienen reviews pero hayan dado algun problema y no se hayan descargado
 hdr = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
