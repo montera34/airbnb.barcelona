@@ -3,7 +3,7 @@ title: "Comparando bases de datos"
 output: html_document
 ---
 
-Este documento generado con Rmarkdown ([/analisis/compare-datasets.Rmd](https://github.com/montera34/airbnb.barcelona/blob/master/analisis/compare-datasets.Rmd)) está pensado para comparar dos bases de datos de Airbnb y poder evaluar los métodos de scraping.  
+Este documento generado con Rmarkdown ([/analisis/compare-datasets.Rmd](https://github.com/montera34/airbnb.barcelona/blob/master/analisis/compare-datasets.Rmd)) está pensado para comparar dos bases de datos de Airbnb y poder evaluar los métodos de scraping.
 
 ```{r setup, include=FALSE, cache = TRUE}
 
@@ -29,9 +29,9 @@ listings_ia <- read.delim("../data/original/airbnb/180818/listings_summary_barce
 
 ```{r, echo = FALSE, warning=FALSE, message=FALSE}
 
-qmplot(longitude, latitude, data = listings_dh, maptype = "toner-lite", color = I("red"),alpha = I(.2)) + labs(title= "DB1: data set 1" )
+qmplot(longitude, latitude, data = listings_dh, maptype = "toner-lite", color = I("red"),alpha = I(.03)) + labs(title= "DB1: data set 1: DH" )
 
-qmplot(longitude, latitude, data = listings_ia, maptype = "toner-lite", color = I("blue"),alpha = I(.2)) + labs(title= "DB2: data set 2" )
+qmplot(longitude, latitude, data = listings_ia, maptype = "toner-lite", color = I("blue"),alpha = I(.03)) + labs(title= "DB2: data set 2: IA" )
 ```
 
 ## Comparando datasets
@@ -77,9 +77,9 @@ DH tiene **`r format(round(100*(nrow(listings_dh)/nrow(unique_listings)), 1))`%*
 AI tiene **`r format(round(100*(nrow(listings_ia)/nrow(unique_listings)), 1))`% **de los anuncios combinados de las dos bases de datos.
 
 ```{r, echo = FALSE, warning=FALSE, message=FALSE}
-qmplot(longitude, latitude, data = dh_not_in_ia, maptype = "toner-lite", color = I("red"),alpha = I(.2)) + labs(title= "anuncios DH que no están en data set IA" )
+qmplot(longitude, latitude, data = dh_not_in_ia, maptype = "toner-lite", color = I("red"),alpha = I(.03)) + labs(title= "anuncios DH que no están en data set IA" )
 
-qmplot(longitude, latitude, data = ia_not_in_dh, maptype = "toner-lite", color = I("blue"),alpha = I(.2)) + labs(title= "anuncios IA que no están en DH" )
+qmplot(longitude, latitude, data = ia_not_in_dh, maptype = "toner-lite", color = I("blue"),alpha = I(.03)) + labs(title= "anuncios IA que no están en DH" )
 ```
 
 ## Los datos
@@ -94,7 +94,7 @@ qmplot(longitude, latitude, data = ia_not_in_dh, maptype = "toner-lite", color =
 
 + http://data.insideairbnb.com/spain/catalonia/barcelona/2018-08-14/visualisations/listings.csv
 
-+ Fecha scraping: 2018-08-14
++ Fecha scraping: 2018-08-18
 
 ```{r, echo = FALSE, warning=FALSE}
 

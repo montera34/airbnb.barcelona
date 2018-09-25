@@ -1,0 +1,135 @@
+---
+title: "Comparando bases de datos"
+output: html_document
+---
+
+Este documento generado con Rmarkdown ([/analisis/compare-datasets.Rmd](https://github.com/montera34/airbnb.barcelona/blob/master/analisis/compare-datasets.Rmd)) está pensado para comparar dos bases de datos de Airbnb.
+
+```{r setup, include=FALSE, cache = TRUE}
+
+# Instala y carga librerías
+library(tidyverse)
+library(gsubfn)
+# library(ggmap)
+
+# Carga datos
+
+# introduce el path de tu archivo listings. Necesitas desactivar Quotes, porque el texto incluye \"
+listings_1 <- read.delim("../data/original/airbnb/180818/listings_summary_barcelona_insideairbnb.csv",sep = ",")
+listings_2 <- read.delim("../data/original/airbnb/180911/listings_summary_barcelona_insideairbnb.csv",sep = ",")
+
+
+```
+
++ **Inside Airbnb** (IA) contiene `r nrow(listings_1)` anuncios en Barcelona (18 agosto 2018) (https://github.com/montera34/airbnb.barcelona/blob/master/data/original/airbnb/180818/listings_summary_barcelona_insideairbnb.csv).
++ **Inside Airbnb** (IA) contienen `r nrow(listings_2)` anuncios en Barcelona (19 septiembre 2018) (https://github.com/montera34/airbnb.barcelona/blob/master/data/original/airbnb/180911/listings_summary_barcelona_insideairbnb.csv).
+
+¿Qué anuncios tienen en común? ¿cuáles no?
+
+## Éstas son las bases de datos sobre el mapa
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+
+qmplot(longitude, latitude, data = listings_1, maptype = "toner-lite", color = I("red"),alpha = I(.03)) + labs(title= "DB1: data set 1: IA" )
+
+qmplot(longitude, latitude, data = listings_2, maptype = "toner-lite", color = I("blue"),alpha = I(.03)) + labs(title= "DB2: data set 2: IA" )
+```
+
+## Comparando datasets
+
+```{r, echo = FALSE, warning=FALSE}
+# de 1 que no están en 2
+d1_not_in_d2 <- listings_1[!(listings_1$id %in% listings_2$id),]
+d1_in_d2 <- listings_1[listings_1$id %in% listings_2$id,]
+# de 2 que no están en 1
+d2_not_in_d1 <- listings_2[!(listings_2$id %in% listings_1$id),]
+d2_in_d1 <- listings_2[listings_2$id %in% listings_1$id,]
+```
+
+
+```{r unique_ids, include=FALSE, cache = FALSE}
+unique_listings_1 <- as.data.frame(listings_1$id)
+names(unique_listings_1)<-c("id")
+
+unique_listings_2 <- as.data.frame(listings_2$id)
+names(unique_listings_2)<-c("id")
+
+unique_listings_p <- rbind(unique_listings_1, unique_listings_2)
+
+# unique(listings_1$id)
+unique_listings <- as.data.frame(unique(unique_listings_p$id))
+```
+
+D1 tiene **`r nrow(listings_1)`** anuncios.
+
+D2 tiene **`r nrow(listings_2)`** anuncios.
+
+A. D1 e D2 tienen **`r nrow(d1_in_d2)`** anuncios comunes.
+
+B. D1 tiene **`r nrow(d1_not_in_d2)`** anuncios que no están en la D2.
+
+C. D2 tiene **`r nrow(d2_not_in_d1)`** anuncios que no están en la D1.
+
+Hay, por tanto **`r nrow(d1_not_in_d2) + nrow(d2_not_in_d1) + nrow(d2_in_d1)` anuncios ** (A + B + C) diferentes en total entre las dos bases de datos. Que concuerda con el valor `r nrow(unique_listings)`, que son el número de valores de id únicos entre d1 y d2.
+
+D1 tiene **`r format(round(100*(nrow(listings_1)/nrow(unique_listings)), 1))`%** de los anuncios combinados de las dos bases de datos.
+
+D2 tiene **`r format(round(100*(nrow(listings_2)/nrow(unique_listings)), 1))`% **de los anuncios combinados de las dos bases de datos.
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+qmplot(longitude, latitude, data = d1_not_in_d2, maptype = "toner-lite", color = I("red"),alpha = I(.2)) + labs(title= "anuncios D1 que no están en data set D2" )
+
+qmplot(longitude, latitude, data = d2_not_in_d1, maptype = "toner-lite", color = I("blue"),alpha = I(.2)) + labs(title= "anuncios D2 que no están en D1" )
+```
+
+## Los datos
+
+### Inside AirBnB
+
++ http://data.insideairbnb.com/spain/catalonia/barcelona/2018-08-14/visualisations/listings.csv
+
++ Fecha scraping: 2018-08-18
+
+### Inside AirBnB
+
++ http://data.insideairbnb.com/spain/catalonia/barcelona/2018-09-11/visualisations/listings.csv
+
++ Fecha scraping: 2018-09-11
+
+```{r, echo = FALSE, warning=FALSE}
+
+# # Merge datasets
+# 
+# d1_not_in_d2$name <- ""
+# d1_not_in_d2$host_name <- ""
+# d1_not_in_d2$neighbourhood_group <- ""
+# d1_not_in_d2$neighbourhood <- ""
+# d1_not_in_d2$last_review <- ""
+# d1_not_in_d2$reviews_per_month <- ""
+# d1_not_in_d2$calculated_host_listings_count <- ""
+# d1_not_in_d2$availability_365 <- ""
+# 
+# # d1_not_in_d2_adapted <- d1_not_in_d2[,c(14,15,7,16,17,18,3,4,8,13,12,11,19,20,21,22)]
+# 
+# # change name of variables
+# # names(d1_not_in_d2_adapted)<-c(names(listings_2))
+# 
+# d2_in_d1$price <- as.numeric(as.character(d2_in_d1$price))
+# d2_not_in_d1$price <- as.numeric(as.character(d2_not_in_d1$price))
+# d1_not_in_d2_adapted$price <- as.numeric(as.character(d1_not_in_d2_adapted$price))
+#   
+#   
+# temp <- rbind(ia_in_1,ia_not_in_1)
+# temp$price  <- as.integer(temp$price)
+# # Merge datasets
+# complete_dataset <- rbind(temp,d1_not_in_d2_adapted)
+# 
+# # Converts to character, uniform name of values, convert to fator again
+# complete_dataset$room_type <- as.character(complete_dataset$room_type)
+# complete_dataset$room_type[complete_dataset$room_type == "private_room"] <- "Private Room"
+# complete_dataset$room_type[complete_dataset$room_type == "entire_home"] <- "Entire home/apt"
+# complete_dataset$room_type <- as.factor(complete_dataset$room_type)
+# # levels(complete_dataset$room_type)
+# 
+# write.table(complete_dataset, "../data/output/airbnb/180818/listings_barcelona_1_ia.csv", sep=",", row.names=FALSE)
+```
