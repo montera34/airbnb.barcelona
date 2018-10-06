@@ -22,6 +22,8 @@ local_activo <- read.delim("../data/original/airbnb/180911/listings_barcelona_in
 attach(local_activo)
 ```
 
+# Análisis 'r local_activo_name'
+
 Este informe se ha generado automáticamente con R a partir del [script de Rmarkdown](https://github.com/montera34/airbn.barcelona/tree/master/analisis/montera34/preanalisis-airbnb.Rmd) disponible en el [repositorio airbnbeuskadi](https://github.com/montera34/airbn.barcelona).
 
 ## Datos
@@ -64,12 +66,11 @@ Estos anuncios (listings, en la terminología de Airbnb) han sido publicados por
 
 ```{r table_propietarios, echo = FALSE, warning=FALSE, eval=TRUE}
 # propietarios <- table(local_activo$host_id) #crea tabla con frecuencias (count) de anfitriones (host_id) con anuncios
-# propietarios <- propietarios[order(-propietarios)] #reordena de mayor a menor
-propietarios <- local_activo %>% group_by(host_id,host_name) %>% summarize(alojamientos = n() ) %>% arrange(desc(alojamientos))
+n_alojamientos <- local_activo %>% group_by(host_id,host_name) %>% summarize(alojamientos = n() ) %>% arrange(desc(alojamientos))
 
-propietarios_nalojamientos <- data.frame(propietarios) # crea data frame
+n_alojamientos <- data.frame(n_alojamientos) # crea data frame
 
-kable(propietarios_nalojamientos[1:30,],caption = "Los 30 anfitriones con más alojamientos")
+kable(n_alojamientos[1:30,],caption = "Los 30 anfitriones con más alojamientos")
 # propietarios_nalojamientos[1:30,]
 # nalojamientos <- donostia %>%
 #   group_by(host_id) %>%
@@ -77,7 +78,7 @@ kable(propietarios_nalojamientos[1:30,],caption = "Los 30 anfitriones con más a
 # arrange(desc(sum.alojamientos))
 # kable(nalojamientos[1:20,],caption = "Los 30 anfitriones con más alojamientos (id)")
 
-ggplot(data = propietarios_nalojamientos[1:25,] ,aes(x = reorder(host_name,alojamientos), y = alojamientos)) +
+ggplot(data = n_alojamientos[1:25,] ,aes(x = reorder(host_name,alojamientos), y = alojamientos)) +
   geom_col() +
   theme_minimal(base_family = "Roboto Condensed", base_size = 14) +
   theme(
@@ -91,6 +92,23 @@ ggplot(data = propietarios_nalojamientos[1:25,] ,aes(x = reorder(host_name,aloja
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
   coord_flip()
 ```
+
+### Distribución de número de plazas por anfitriones
+
+```{r table_anfitriones_distribucion, echo = FALSE, warning=FALSE,, eval=TRUE}
+ggplot(data=n_alojamientos, aes(alojamientos)) + 
+  geom_histogram(breaks=seq(0, 200, by = 1), 
+                 col="#999999", 
+                 fill="#999999", 
+                 alpha = .2) + 
+  labs(title="Histograma de alojamientos por anfitrión") +
+  labs(x="número de alojamientos", y="número de alojamientos por anfitrión") + 
+  xlim(c(0,200)) 
+
+
+res <- hist(n_alojamientos$alojamientos)
+
+``` 
 
 ### Los anfitriones con más plazas
 
@@ -125,7 +143,50 @@ ggplot(data = naccommodates[1:25,] ,aes(x = reorder(host_name,accommodates_sum),
   coord_flip()
 ```
 
+
+### Distribución de número de plazas por anfitriones
+
+```{r table_anfitriones_distribucion, echo = FALSE, warning=FALSE,, eval=TRUE}
+ggplot(data=naccommodates, aes(accommodates_sum)) + 
+  geom_histogram(breaks=seq(0, 1100, by = 1), 
+                 col="#999999", 
+                 fill="#999999", 
+                 alpha = .2) + 
+  labs(title="Histograma de plazas por anfitrión") +
+  labs(x="número de plazas", y="número de plazas por anfitrión") + 
+  xlim(c(0,1100)) 
+``` 
+```{r final_output_distribucion_1, echo = FALSE, warning=FALSE,, eval=TRUE}
+distribucion <- data.frame(matrix(0, ncol = 4, nrow = 3))
+names(distribucion) <- c("n1","n2","n3.4","mas_de_5")
+rownames(distribucion) <- c("anfitriones","alojamientos","plazas")
+
+# Calcul acuantos anfitriones tienen n alojamientos
+distribucion$n1[1] <- nrow(n_alojamientos[n_alojamientos$alojamientos == 1,])
+distribucion$n2[1] <- nrow(n_alojamientos[n_alojamientos$alojamientos == 2,])
+distribucion$n3.4[1] <- nrow(n_alojamientos[(n_alojamientos$alojamientos == 3 |n_alojamientos$alojamientos == 4) ,])
+distribucion$mas_de_5[1] <- nrow(n_alojamientos[n_alojamientos$alojamientos >4,])
+
+# Calcula cuantos alojamientos en total tienen los anfitriones con n alojamientos
+distribucion$n1[2] <- sum(n_alojamientos[n_alojamientos$alojamientos == 1,"alojamientos"])
+distribucion$n2[2] <- sum(n_alojamientos[n_alojamientos$alojamientos == 2,"alojamientos"])
+distribucion$n3.4[2] <- sum(n_alojamientos[(n_alojamientos$alojamientos == 3 |n_alojamientos$alojamientos == 4),"alojamientos"])
+distribucion$mas_de_5[2] <- sum(n_alojamientos[n_alojamientos$alojamientos >4,"alojamientos"])
+
+# length(unique(local_activo$id))
+# sum(distribucion[2,])
+
+# Calcula cuantas plazas en total tienen los anfitriones con n alojamientos
+distribucion$n1[3] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[n_alojamientos$alojamientos == 1,]$host_id,]$accommodates_sum)
+distribucion$n2[3] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[n_alojamientos$alojamientos == 2,]$host_id,]$accommodates_sum)
+distribucion$n3.4[3] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[(n_alojamientos$alojamientos == 3 | n_alojamientos$alojamientos == 4),]$host_id,]$accommodates_sum)
+distribucion$mas_de_5[3] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[n_alojamientos$alojamientos > 4,]$host_id,]$accommodates_sum)
+
+
+```
+
 ```{r table_anfitriones_2b, echo = FALSE, warning=FALSE,, eval=TRUE}
+# calculates basic numbers
 n_hosts <- length(unique(local_activo$host_id))
 n_acommodates <- sum(local_activo$accommodates)
 ```
