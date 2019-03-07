@@ -169,8 +169,8 @@ listings.total %>% filter(d180911 == 1) %>%
 dev.off()
 
 # barra  coloreado según cuándo fue encontrado y filtrando por fecha concreta
-png(filename=paste("images/airbnb/eliminados/eliminados-05.png", sep = ""),width = 1000,height = 750)
-listings.total %>% filter(d180911 == 1) %>%
+png(filename=paste("images/airbnb/eliminados/eliminados-06.png", sep = ""),width = 1000,height = 750)
+listings.total %>% filter(d180818 == 1) %>%
   ggplot(aes(x=1,fill=as.factor(found))) + 
   geom_bar() +
   scale_fill_manual(values = getPalette(colourCount)) +
@@ -182,7 +182,7 @@ listings.total %>% filter(d180911 == 1) %>%
     axis.text.y = element_blank(),
     legend.position = "bottom"
   ) +
-  labs(title = "Cuándo se publicaron por 1ª vez los anuncios que estaban en sept2018",
+  labs(title = "Cuándo se publicaron por 1ª vez los anuncios que estaban en agosto 2018",
        subtitle = "",
        y = "nº de anuncios",
        x = "",
@@ -190,6 +190,46 @@ listings.total %>% filter(d180911 == 1) %>%
        )+
   coord_flip() 
 dev.off()
+
+# loop all the dates
+for (i in 1:length(dates)) {
+# for (i in 1:2) {
+  # barra  coloreado según cuándo fue encontrado y filtrando por fecha concreta
+  column.select <- paste("d",dates[i],sep = "")
+  print(column.select)
+  png(filename=paste("images/airbnb/eliminados/matrix/",column.select,".png", sep = ""),width = 400,height = 1000)
+  filename <- paste("images/airbnb/eliminados/matrix/",column.select,".png", sep = "")
+  print(filename)
+  # seen in Pass a string as variable name in dplyr::filter https://stackoverflow.com/questions/48219732/pass-a-string-as-variable-name-in-dplyrfilter
+  p <- listings.total %>% filter((!!sym(column.select)) == 1) %>%
+      ggplot(aes(x=1,fill=as.factor(found))) + # reverse orden of factors
+      geom_bar() +
+      scale_fill_manual(values = getPalette(colourCount)) +
+      theme_minimal(base_family = "Roboto Condensed", base_size =10) +
+      theme(
+        panel.grid.minor.y = element_blank(),
+        # panel.grid.major.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        # axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        legend.title = element_blank()
+        # legend.position = "none"
+      ) +
+      labs(title = dates[i],
+           subtitle = "",
+           y = "",
+           x = ""
+           # caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb"
+      )+
+    scale_y_continuous(limits = c(0,20000)) 
+      # coord_flip()
+  print(p) 
+  dev.off()
+}
+
+# Then build matrix with "montage" the imagemagick function:
+# montage d1* -geometry 200x800+0+0 vertical.png
 
 # for network graph ------
 # Exports data to use them in gephi
