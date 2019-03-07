@@ -242,3 +242,66 @@ nodes <- as.data.frame(c(unique(links$target),unique(links$source)))
 # Sve data if needed
 write.csv(links, file="temp/links-listings-post-2017.csv")
 write.csv(nodes, file="temp/nodes-listings-post-2017.csv")
+
+# build matrix for heat map -----
+# Find listings that are in first two scrapings
+listings.total[listings.total$d150717 == 1 & listings.total$d150430 == 1,1:3]
+listings.total %>% filter(d150717 == 1 & d150430 == 1)
+
+# count listings
+nrow(listings.total[listings.total$d150717 == 1 & listings.total$d150430 == 1,])
+nrow(listings.total %>% filter(d150717 == 1 & d150430 == 1))
+     
+heat.matrix <- data.frame(matrix(ncol = length(dates),nrow = length(dates)  ))
+names(heat.matrix) <- dates
+row.names(heat.matrix) <- dates
+
+for (j in 1:length(dates)) {
+  print(paste("j:",j))
+  for (i in 1:length(dates)) {
+    print(paste("i:",i))
+    column.select.i <- paste("d",dates[j],sep = "")
+    column.select.j <- paste("d",dates[i],sep = "")
+    print(paste(column.select.i,"interseccion con",column.select.j,":"))
+      coinciden <- nrow(listings.total %>% filter((!!sym(column.select.i))== 1 & (!!sym(column.select.j)) == 1) )
+      print(coinciden)
+      print("mete dato en")
+      heat.matrix[j,i] <- coinciden 
+      # heat.matrix[i,j] <- coinciden 
+  }
+}
+
+write.csv(heat.matrix, file="temp/heat.matrix.csv")
+
+# basic heatmap
+image(as.matrix(heat.matrix), xlab = 'Matrix rows', ylab = 'Matrix columns', axes = F)
+
+# add id to column
+heat.matrix$id <- colnames(heat.matrix)
+# melt, from wide to long format
+heat.matrix.m <- melt(heat.matrix)
+# heat.matrix.m <- melt(heat.matrix,variable.name = "sample",value.name = "other",id="id")
+ggplot(heat.matrix.m , aes(x = id, y = variable, fill = -value)) + geom_tile()
+
+# help https://blog.aicry.com/r-heat-maps-with-ggplot2/index.html
+library(RColorBrewer)
+hm.palette <- colorRampPalette(rev(brewer.pal(9, 'YlOrRd')), space='Lab')
+
+png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-01.png", sep = ""),width = 1200,height = 1200)
+ggplot(heat.matrix.m , aes(x = id, y = variable, fill = value)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_gradientn(colours = rev(hm.palette(100))) +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 12) +
+  theme(
+    # panel.grid.minor.x = element_blank(), 
+    # panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = 90, vjust = 0.4)
+  ) +
+  labs(title = "Número de anuncios coincidentes en bases de datos de InsideAirbnb",
+       subtitle = "2015-2018",
+       y = "fechas",
+       x = "fechas",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
