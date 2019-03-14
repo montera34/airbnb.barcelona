@@ -60,16 +60,6 @@ data_long$fechab <- as.Date( paste(20,as.character(data_long$fechal),sep=""), "%
 #   # geom_dotplot(binaxis = "y", stackdir = "center", position = "dodge",alpha=0.3,size=0.1)
 #   geom_point(size=0.1,alpha=0.8)
 
-# subset data for speed
-test <- data_long[data_long$exists == 1 & data_long$fechab > "2018-04-01",]
-ggplot(test[sample(nrow(test),100),],aes(x = as.factor(fecha), y = as.factor(id))) +
-  geom_point(size=3,alpha=0.8)
-
-# png(filename=paste("temp/eliminados-03.png", sep = ""),width = 2000,height = 5000)
-# ggplot(test,aes(x = as.factor(fecha), y = as.factor(id))) +
-#   geom_bin2d()
-# dev.off()
-
 # Adds when listing was first found -----
 listings.total.found <- data_long %>% filter(exists == 1) %>% group_by(id) %>% summarise(found = min(fechab)) %>% ungroup()
 # listings.total <- listings.total %>% select(-"min(fechab)")
@@ -233,6 +223,16 @@ for (i in 1:length(dates)) {
 # montage d1* -geometry 200x800+0+0 vertical.png
 
 # for network graph ------
+# subset data for speed the process. Only after 2018-04 ----
+test <- data_long[data_long$exists == 1 & data_long$fechab > "2018-04-01",]
+ggplot(test[sample(nrow(test),100),],aes(x = as.factor(fecha), y = as.factor(id))) +
+  geom_point(size=3,alpha=0.8)
+
+# png(filename=paste("temp/eliminados-03.png", sep = ""),width = 2000,height = 5000)
+# ggplot(test,aes(x = as.factor(fecha), y = as.factor(id))) +
+#   geom_bin2d()
+# dev.off()
+
 # Exports data to use them in gephi
 rownames(test) <- 1:111557
 
@@ -254,10 +254,12 @@ write.csv(nodes, file="temp/nodes-listings-post-2017.csv")
 # nrow(listings.total[listings.total$d150717 == 1 & listings.total$d150430 == 1,])
 # nrow(listings.total %>% filter(d150717 == 1 & d150430 == 1))
 
-# Analyses ony Entire home/apartment ads
+# Analyses ony Entire home/apartment ads --------
 listings.total.all <- listings.total # saves original
 listings.total <- filter(listings.total.all,room_type == "Entire home/apt") #only entire homes
 
+
+# Creates matrix
 heat.matrix <- data.frame(matrix(ncol = length(dates),nrow = length(dates)  ))
 names(heat.matrix) <- dates
 row.names(heat.matrix) <- dates
@@ -371,9 +373,11 @@ ggplot(heat.matrix.m.p , aes(x = id, y = variable, fill = value)) +
 dev.off()
 
 # Anuncios coincidentes en gráficos de línea
+png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03.png", sep = ""),width = 1400,height = 600)
 ggplot(heat.matrix.m.p , aes(x = id, y = value, group = variable,color=variable)) +
   geom_line() +
   geom_point(size=0.5) +
+  geom_text(aes(label=value),size=3,color="#000000")+
   scale_fill_manual(values = getPalette(colourCount)) +
   theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
   theme(
@@ -382,11 +386,13 @@ ggplot(heat.matrix.m.p , aes(x = id, y = value, group = variable,color=variable)
     legend.position = "right",
     axis.text.x = element_text(angle = 90, vjust = 0.4)
   ) +
-  labs(title = "Anuncios coincidentes en bases de datos de InsideAirbnb",
+  labs(title = "Anuncios de pisos completos coincidentes en bases de datos de InsideAirbnb",
        subtitle = "Cada línea es una base de datos. 2016-2018",
-       y = "% coincidencia",
+       y = "nº coincidencias",
        x = "fechas",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
+
 
 # heat matrix desde 161107 normalizada-----------
 heat.matrix.n <- data.frame(matrix(ncol = length(dates.p),nrow = length(dates.p)  ))
@@ -468,11 +474,14 @@ dev.off()
 # dev.off()
 
 # converts to date
-heat.matrix.n.m.p$id2 <- as.Date( paste(20,as.character(heat.matrix.n.m.p$id),sep=""), "%Y%m%d")
+heat.matrix.n.m.p$date <- as.Date( paste(20,as.character(heat.matrix.n.m.p$variable),sep=""), "%Y%m%d")
+# heat.matrix.n.m.p$id <- as.factor(heat.matrix.n.m.p$id)
 
 # png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-02-normalizada.png", sep = ""),width = 1400,height = 600)
 png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-02-normalizad-pisos-completos.png", sep = ""),width = 1400,height = 600)
-ggplot(heat.matrix.n.m.p , aes(x = id2, y = value, group = variable,color=variable)) +
+# heat.matrix.n.m.p %>% filter(id=="180514") %>%
+# ggplot(aes(x = date, y = value)) +
+ggplot(heat.matrix.n.m.p, aes(x = date, y = value, group = id,color=variable)) +
   geom_line() +
   geom_point(size=1) +
   scale_fill_manual(values = getPalette(colourCount)) +
@@ -496,19 +505,25 @@ dev.off()
 png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos.png", sep = ""),width = 1400,height = 600)
 ggplot() + 
   # lines
-  geom_line(data=heat.matrix.n.m.p, aes(x = id2, y = value, group = variable),color="#bbbbbb") +
+  geom_line(data=heat.matrix.n.m.p, aes(x = date, y = value, group = id),color="#bbbbbb") +
   # line destacada
-  geom_line(data=filter(heat.matrix.n.m.p,variable=="180609"), aes(x = id2, y = value, group = variable),color="#ddbbbb",size=2) +
+  geom_line(data=filter(heat.matrix.n.m.p,id=="180514"), aes(x = date, y = value, group =id),color="#ddbbbb",size=2) +
+  # line destacada
+  # geom_line(data=filter(heat.matrix.n.m.p,id=="180818"), aes(x = date, y = value, group = id),color="#bbddbb",size=2) +
   # points
-  geom_point(data=heat.matrix.n.m.p, aes(x = id2, y = value), size=1,color="#bbbbbb") +
-  geom_point(data=filter(heat.matrix.n.m.p,variable=="180609"), aes(x = id2, y = value), size=2,color="#ddbbbb") +
+  geom_point(data=heat.matrix.n.m.p, aes(x = date, y = value), size=1,color="#bbbbbb") +
+  # destaca puntos mayo
+  geom_point(data=filter(heat.matrix.n.m.p,id=="180514"), aes(x = date, y = value), size=2,color="#bb9999") +
+  geom_text(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-05-01") & date < as.Date("2018-07-01")),
+            aes(x = date, y = value+3,label=paste(value,"%",sep="")),size=4)+
   # colors
   scale_fill_manual(values = getPalette(colourCount)) +
   # scale
   scale_x_date(date_breaks = "1 month",date_labels = "%m-%Y") +
   # anotation
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  geom_label(x=as.Date("2018-05-31"),y=40,label="acuerdo",color="#000000") +
+  annotate("text",x=as.Date("2018-05-15"),y=40,label="acuerdo",color="#000000",size=4) +
+  annotate("text",x=as.Date("2018-06-30"),y=87,label="El 29% desapareció",color="#000000",size=4) +
   # theme
   theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
   theme(
@@ -519,9 +534,9 @@ ggplot() +
     legend.position = "right",
     axis.text.x = element_text(angle = 90, vjust = 0.4)
   ) +
-  labs(title = "Porcentaje de anuncios coincidentes en bases de datos de InsideAirbnb",
-       subtitle = "Pisos completos. Cada línea es una base de datos. 2016-2018",
+  labs(title = "Porcentaje de anuncios de pisos completos coincidentes entre bases de datos de InsideAirbnb",
+       subtitle = "Cada línea es una base de datos. 2016-2018",
        y = "% coincidencia",
-       x = "fechas",
+       x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
