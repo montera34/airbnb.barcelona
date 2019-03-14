@@ -19,6 +19,10 @@ listings  <- select(as.data.frame(read.delim("data/original/airbnb/150430/listin
 # names(listings) <- "id"
 listings.total <- listings
 
+# Set up style theme for ggplot
+our.theme <- theme_minimal(base_family = "Roboto Condensed")
+theme_set(our.theme)
+
 # Loop para ir  insertando los listings 
 for (i in 1:length(dates)) {
   print("listings totales: ")
@@ -55,6 +59,24 @@ data_long <- listings.total %>% gather(fecha, exists, 3:29)
 data_long$fechal <- strapplyc( as.character(data_long$fecha), "d([0-9]*)", simplify = TRUE)
 data_long$fechab <- as.Date( paste(20,as.character(data_long$fechal),sep=""), "%Y%m%d")
 
+# counts listings per scraping date ----
+dates.count <- data_long %>% filter (exists ==1) %>% group_by(fechab,room_type) %>% summarise(anuncios=n())
+
+# todos los anuncios
+dates.count %>%
+ggplot () + geom_col(aes(fechab,anuncios))
+
+# separado por anuncios
+dates.count %>%
+  ggplot () +
+  geom_step(aes(fechab,anuncios,group=room_type,color=room_type)) 
+  # geom_point(aes(fechab,count,color=room_type))
+
+# anuncios de pisos completos
+dates.count %>% filter(room_type=="Entire home/apt") %>%
+  ggplot () + 
+  geom_col(aes(fechab,anuncios))
+
 # data_long[data_long$exists == 1 & data_long$fechab > "2018-04-01",] %>%
 # ggplot(aes(x = as.factor(fecha), y = as.factor(id))) +
 #   # geom_dotplot(binaxis = "y", stackdir = "center", position = "dodge",alpha=0.3,size=0.1)
@@ -84,7 +106,7 @@ listings.total %>%
   geom_histogram(binwidth = 1) +
   scale_fill_manual(values = getPalette(colourCount)) +
   # scale_fill_continuous() +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 14) +
+  theme_minimal(base_size = 14) +
   theme(
     # panel.grid.minor.x = element_blank(), 
     # panel.grid.major.x = element_blank(),
@@ -104,7 +126,7 @@ listings.total %>%
   geom_histogram(binwidth = 1) +
   scale_fill_manual(values = getPalette(colourCount)) +
   # scale_fill_continuous() +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 14) +
+  theme_minimal(base_size = 14) +
   theme(
     # panel.grid.minor.x = element_blank(), 
     # panel.grid.major.x = element_blank(),
@@ -124,7 +146,7 @@ listings.total %>% filter(found > "2018-04-01") %>%
   geom_histogram(binwidth = 1) +
   scale_fill_manual(values = getPalette(colourCount)) +
   # scale_fill_continuous() +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 14) +
+  theme_minimal(base_size = 14) +
   theme(
     # panel.grid.minor.x = element_blank(), 
     # panel.grid.major.x = element_blank(),
@@ -144,7 +166,7 @@ listings.total %>% filter(d180911 == 1) %>%
   geom_histogram(binwidth = 1) +
   scale_fill_manual(values = getPalette(colourCount)) +
   # scale_fill_continuous() +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 14) +
+  theme_minimal(base_size = 14) +
   theme(
     # panel.grid.minor.x = element_blank(), 
     # panel.grid.major.x = element_blank(),
@@ -166,7 +188,7 @@ listings.total %>% filter(d180818 == 1) %>%
   geom_bar() +
   scale_fill_manual(values = getPalette(colourCount)) +
   # scale_fill_continuous() +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 14) +
+  theme_minimal(base_size = 14) +
   theme(
     panel.grid.minor.y = element_blank(),
     panel.grid.major.y = element_blank(),
@@ -196,7 +218,7 @@ for (i in 1:length(dates)) {
       ggplot(aes(x=1,fill=as.factor(found))) + # reverse orden of factors
       geom_bar() +
       scale_fill_manual(values = getPalette(colourCount)) +
-      theme_minimal(base_family = "Roboto Condensed", base_size =10) +
+      theme_minimal(base_size =10) +
       theme(
         panel.grid.minor.y = element_blank(),
         # panel.grid.major.y = element_blank(),
@@ -223,7 +245,7 @@ for (i in 1:length(dates)) {
 # montage d1* -geometry 200x800+0+0 vertical.png
 
 # for network graph ------
-# subset data for speed the process. Only after 2018-04 ----
+# subset data for speed the process. Only after 2018-04 
 test <- data_long[data_long$exists == 1 & data_long$fechab > "2018-04-01",]
 ggplot(test[sample(nrow(test),100),],aes(x = as.factor(fecha), y = as.factor(id))) +
   geom_point(size=3,alpha=0.8)
@@ -301,7 +323,7 @@ ggplot(heat.matrix.m , aes(x = id, y = variable, fill = value)) +
   geom_tile() +
   coord_equal() +
   scale_fill_gradientn(colours = rev(hm.palette(100))) +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 12) +
+  theme_minimal(base_size = 12) +
   theme(
     # panel.grid.minor.x = element_blank(), 
     # panel.grid.major.x = element_blank(),
@@ -358,7 +380,7 @@ ggplot(heat.matrix.m.p , aes(x = id, y = variable, fill = value)) +
   # geom_text(aes(label=value)) +
   coord_equal() +
   scale_fill_gradientn(colours = rev(hm.palette(100))) +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 22) +
+  theme_minimal(base_size = 22) +
   theme(
     # panel.grid.minor.x = element_blank(), 
     # panel.grid.major.x = element_blank(),
@@ -379,7 +401,7 @@ ggplot(heat.matrix.m.p , aes(x = id, y = value, group = variable,color=variable)
   geom_point(size=0.5) +
   geom_text(aes(label=value),size=3,color="#000000")+
   scale_fill_manual(values = getPalette(colourCount)) +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
+  theme_minimal(base_size = 25) +
   theme(
     # panel.grid.minor.x = element_blank(),
     # panel.grid.major.x = element_blank(),
@@ -437,7 +459,7 @@ ggplot(heat.matrix.n.m.p , aes(x = id, y = variable, fill = value)) +
   geom_text(aes(label=value),size=6) +
   coord_equal() +
   scale_fill_gradientn(colours = rev(hm.palette(100))) +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 28) +
+  theme_minimal(base_size = 28) +
   theme(
     # panel.grid.minor.x = element_blank(), 
     # panel.grid.major.x = element_blank(),
@@ -459,7 +481,7 @@ dev.off()
 #   geom_line() +
 #   geom_point(size=0.5) +
 #   scale_fill_manual(values = getPalette(colourCount)) +
-#   theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
+#   theme_minimal(base_size = 25) +
 #   theme(
 #     # panel.grid.minor.x = element_blank(), 
 #     # panel.grid.major.x = element_blank(),
@@ -488,7 +510,7 @@ ggplot(heat.matrix.n.m.p, aes(x = date, y = value, group = id,color=variable)) +
   scale_x_date(date_breaks = "1 month",date_labels = "%m-%Y") +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
   geom_label(x=as.Date("2018-05-31"),y=40,label="acuerdo",color="#000000") +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
+  theme_minimal(base_size = 25) +
   theme(
     panel.grid.minor.x = element_blank(),
     # panel.grid.major.x = element_blank(),
@@ -525,7 +547,7 @@ ggplot() +
   annotate("text",x=as.Date("2018-05-15"),y=40,label="acuerdo",color="#000000",size=4) +
   annotate("text",x=as.Date("2018-06-30"),y=87,label="El 29% desapareció",color="#000000",size=4) +
   # theme
-  theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
+  theme_minimal(base_size = 25) +
   theme(
     panel.grid.minor.x = element_blank(),
     panel.grid.major = element_line(size=0.6),
