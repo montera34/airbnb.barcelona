@@ -6,9 +6,7 @@ library(gsubfn)
 library(tidyverse)
 # extends color paletter
 library(RColorBrewer)
-
-# Loadlistings -----
-listings  <- read.delim("data/original/airbnb/150430/listings_summary_barcelona_insideairbnb.csv",sep = ",")$id
+library("reshape2")
 
 # ------ Get dates when data are --------
 # Loads dates with listings data
@@ -53,7 +51,6 @@ for (i in 1:length(dates)) {
 
 # converts to long format -----
 data_long <- listings.total %>% gather(fecha, exists, 3:29)
-
 # parses date
 data_long$fechal <- strapplyc( as.character(data_long$fecha), "d([0-9]*)", simplify = TRUE)
 data_long$fechab <- as.Date( paste(20,as.character(data_long$fechal),sep=""), "%Y%m%d")
@@ -73,7 +70,7 @@ ggplot(test[sample(nrow(test),100),],aes(x = as.factor(fecha), y = as.factor(id)
 #   geom_bin2d()
 # dev.off()
 
-# Adds when listing was found -----
+# Adds when listing was first found -----
 listings.total.found <- data_long %>% filter(exists == 1) %>% group_by(id) %>% summarise(found = min(fechab)) %>% ungroup()
 # listings.total <- listings.total %>% select(-"min(fechab)")
 listings.total <- inner_join(listings.total,listings.total.found)
@@ -87,6 +84,8 @@ listings.total$sum2018 <- rowSums(listings.total[,22:29])
 # extends color paletter
 colourCount <- length(unique(listings.total$found))
 getPalette <- colorRampPalette(brewer.pal(9, "Set1"))
+
+# Plots: histograms -----
 
 # histograma básico
 png(filename=paste("images/airbnb/eliminados/eliminados-01.png", sep = ""),width = 1000,height = 750)
@@ -128,7 +127,6 @@ listings.total %>%
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
 
-
 # histograma coloreado según cuándo fue encontrado y filtrando por mayor que una fecha
 png(filename=paste("images/airbnb/eliminados/eliminados-03.png", sep = ""),width = 1000,height = 750)
 listings.total %>% filter(found > "2018-04-01") %>%
@@ -168,6 +166,8 @@ listings.total %>% filter(d180911 == 1) %>%
        x = "número de veces que aparece",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
+
+# Plots: when they were frist found. Bars -----
 
 # barra  coloreado según cuándo fue encontrado y filtrando por fecha concreta
 png(filename=paste("images/airbnb/eliminados/eliminados-06.png", sep = ""),width = 1000,height = 750)
@@ -229,7 +229,7 @@ for (i in 1:length(dates)) {
   dev.off()
 }
 
-# Then build matrix with "montage" the imagemagick function:
+# Then build matrix with "montage" the imagemagick function with bash:
 # montage d1* -geometry 200x800+0+0 vertical.png
 
 # for network graph ------
@@ -245,14 +245,19 @@ write.csv(links, file="temp/links-listings-post-2017.csv")
 write.csv(nodes, file="temp/nodes-listings-post-2017.csv")
 
 # build matrix for heat map -----
-# Find listings that are in first two scrapings
-listings.total[listings.total$d150717 == 1 & listings.total$d150430 == 1,1:3]
-listings.total %>% filter(d150717 == 1 & d150430 == 1)
+# # Tests for calculating with 2 databases
+# # Find listings that are in first two scrapings
+# listings.total[listings.total$d150717 == 1 & listings.total$d150430 == 1,1:3]
+# listings.total %>% filter(d150717 == 1 & d150430 == 1)
+# 
+# # count listings
+# nrow(listings.total[listings.total$d150717 == 1 & listings.total$d150430 == 1,])
+# nrow(listings.total %>% filter(d150717 == 1 & d150430 == 1))
 
-# count listings
-nrow(listings.total[listings.total$d150717 == 1 & listings.total$d150430 == 1,])
-nrow(listings.total %>% filter(d150717 == 1 & d150430 == 1))
-     
+# Analyses ony Entire home/apartment ads
+listings.total.all <- listings.total # saves original
+listings.total <- filter(listings.total.all,room_type == "Entire home/apt") #only entire homes
+
 heat.matrix <- data.frame(matrix(ncol = length(dates),nrow = length(dates)  ))
 names(heat.matrix) <- dates
 row.names(heat.matrix) <- dates
@@ -266,7 +271,7 @@ for (j in 1:length(dates)) {
     print(paste(column.select.i,"interseccion con",column.select.j,":"))
       coinciden <- nrow(listings.total %>% filter((!!sym(column.select.i))== 1 & (!!sym(column.select.j)) == 1) )
       print(coinciden)
-      print("mete dato en")
+      print(paste("mete dato en ","[j:",j,", i:",i,"]",sep = ""))
       heat.matrix[j,i] <- coinciden 
       # heat.matrix[i,j] <- coinciden 
   }
@@ -288,7 +293,8 @@ ggplot(heat.matrix.m , aes(x = id, y = variable, fill = -value)) + geom_tile()
 # extends color palette
 hm.palette <- colorRampPalette(rev(brewer.pal(9, 'YlOrBr')), space='Lab')
 
-png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-02.png", sep = ""),width = 1200,height = 1200)
+# png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-02.png", sep = ""),width = 1200,height = 1200)
+png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-02-pisos-completos.png", sep = ""),width = 1200,height = 1200)
 ggplot(heat.matrix.m , aes(x = id, y = variable, fill = value)) +
   geom_tile() +
   coord_equal() +
@@ -301,17 +307,12 @@ ggplot(heat.matrix.m , aes(x = id, y = variable, fill = value)) +
     axis.text.x = element_text(angle = 90, vjust = 0.4)
   ) +
   labs(title = "Número de anuncios coincidentes en bases de datos de InsideAirbnb",
-       subtitle = "2015-2018",
+       # subtitle = "2015-2018",
+       subtitle = "Pisos completos. 2015-2018",
        y = "fechas",
        x = "fechas",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
-
-# TODO: si quieres normalizar valores: https://learnr.wordpress.com/2010/01/26/ggplot2-quick-heatmap-plotting/
-# nba.m <- ddply(nba.m, .(variable), transform, rescale = rescale(value))
-
-
-
 
 # heat matrix desde 161107-----------
 dates.p <- dates
@@ -330,7 +331,7 @@ for (j in 1:length(dates.p)) {
     print(paste(column.select.i,"interseccion con",column.select.j,":"))
     coinciden <- nrow(listings.total %>% filter((!!sym(column.select.i))== 1 & (!!sym(column.select.j)) == 1) )
     print(coinciden)
-    print("mete dato en")
+    print(paste("mete dato en ","[j:",j,", i:",i,"]",sep = ""))
     heat.matrix.p[j,i] <- coinciden 
     # heat.matrix[i,j] <- coinciden 
   }
@@ -344,12 +345,12 @@ image(as.matrix(heat.matrix.p), xlab = 'Matrix rows', ylab = 'Matrix columns', a
 # add id to column
 heat.matrix.p$id <- colnames(heat.matrix.p)
 # melt, from wide to long format
-library(reshape2)
 heat.matrix.m.p <- melt(heat.matrix.p)
 # heat.matrix.m <- melt(heat.matrix,variable.name = "sample",value.name = "other",id="id")
 ggplot(heat.matrix.m.p , aes(x = id, y = variable, fill = -value)) + geom_tile()
 
-png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-02p.png", sep = ""),width = 1200,height = 1200)
+# png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-02p.png", sep = ""),width = 1200,height = 1200)
+png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-02p-pisos-completos.png", sep = ""),width = 1200,height = 1200)
 ggplot(heat.matrix.m.p , aes(x = id, y = variable, fill = value)) +
   geom_tile() +
   # geom_text(aes(label=value)) +
@@ -363,11 +364,29 @@ ggplot(heat.matrix.m.p , aes(x = id, y = variable, fill = value)) +
     axis.text.x = element_text(angle = 90, vjust = 0.4)
   ) +
   labs(title = "Número de anuncios coincidentes en bases de datos de InsideAirbnb",
-       subtitle = "2016-2018",
+       subtitle = "Pisos completos. 2016-2018",
        y = "fechas",
        x = "fechas",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
+
+# Anuncios coincidentes en gráficos de línea
+ggplot(heat.matrix.m.p , aes(x = id, y = value, group = variable,color=variable)) +
+  geom_line() +
+  geom_point(size=0.5) +
+  scale_fill_manual(values = getPalette(colourCount)) +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
+  theme(
+    # panel.grid.minor.x = element_blank(),
+    # panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 90, vjust = 0.4)
+  ) +
+  labs(title = "Anuncios coincidentes en bases de datos de InsideAirbnb",
+       subtitle = "Cada línea es una base de datos. 2016-2018",
+       y = "% coincidencia",
+       x = "fechas",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 
 # heat matrix desde 161107 normalizada-----------
 heat.matrix.n <- data.frame(matrix(ncol = length(dates.p),nrow = length(dates.p)  ))
@@ -377,6 +396,7 @@ row.names(heat.matrix.n) <- dates.p
 for (j in 1:length(dates.p)) {
   print(paste("j:",j))
   for (i in 1:length(dates.p)) {
+    print("---------")
     print(paste("i:",i))
     column.select.i <- paste("d",dates.p[j],sep = "")
     column.select.j <- paste("d",dates.p[i],sep = "")
@@ -384,10 +404,10 @@ for (j in 1:length(dates.p)) {
     coinciden <- nrow(listings.total %>% filter((!!sym(column.select.i))== 1 & (!!sym(column.select.j)) == 1) )
     total <- nrow( listings.total %>% filter((!!sym(column.select.i))== 1) )
     percent <- round(coinciden/total*100, digits = 0)
-    print(paste("elementos que coinciden",coinciden,"divididos por",total))
-    print(paste("sale:",percent))
+    print(paste("elementos que coinciden ",coinciden," divididos por ",total," (",column.select.i,")",sep=""))
+    print(paste("sale:",percent,"%"))
     # print(coinciden,total,percent)
-    print("mete dato en")
+    print(paste("mete dato en ","[j:",j,", i:",i,"]",sep = ""))
     heat.matrix.n[j,i] <- percent
   }
 }
@@ -404,7 +424,8 @@ heat.matrix.n.m.p <- melt(heat.matrix.n)
 # heat.matrix.m <- melt(heat.matrix,variable.name = "sample",value.name = "other",id="id")
 ggplot(heat.matrix.n.m.p , aes(x = id, y = variable, fill = value)) + geom_tile()
 
-png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-02-normalizada-text.png", sep = ""),width = 1200,height = 1200)
+# png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-02-normalizada-text.png", sep = ""),width = 1200,height = 1200)
+png(filename=paste("images/airbnb/eliminados/heat-map-coincidencias-barcelona-insideairbnb-02-normalizada-text-pisos-completos.png", sep = ""),width = 1200,height = 1200)
 ggplot(heat.matrix.n.m.p , aes(x = id, y = variable, fill = value)) +
   geom_tile() +
   geom_text(aes(label=value),size=6) +
@@ -418,40 +439,46 @@ ggplot(heat.matrix.n.m.p , aes(x = id, y = variable, fill = value)) +
     axis.text.x = element_text(angle = 90, vjust = 0.4)
   ) +
   labs(title = "Porcentaje de anuncios coincidentes en bases de datos de InsideAirbnb",
-       subtitle = "2016-2018",
+       subtitle = "Pisos completos. 2016-2018",
        y = "fechas",
        x = "fechas",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
 
-png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-01-normalizada.png", sep = ""),width = 1400,height = 600)
-ggplot(heat.matrix.n.m.p , aes(x = id, y = value, group = variable,color=variable)) +
-  geom_line() +
-  geom_point(size=0.5) +
-  scale_fill_manual(values = getPalette(colourCount)) +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
-  theme(
-    # panel.grid.minor.x = element_blank(), 
-    # panel.grid.major.x = element_blank(),
-    legend.position = "right",
-    axis.text.x = element_text(angle = 90, vjust = 0.4)
-  ) +
-  labs(title = "Porcentaje de anuncios coincidentes en bases de datos de InsideAirbnb",
-       subtitle = "Cada línea es una base de datos. 2016-2018",
-       y = "% coincidencia",
-       x = "fechas",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
-dev.off()
+# Plots coincidencias normalizadas
+
+# fechas sin parsear
+# png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-01-normalizada.png", sep = ""),width = 1400,height = 600)
+# ggplot(heat.matrix.n.m.p , aes(x = id, y = value, group = variable,color=variable)) +
+#   geom_line() +
+#   geom_point(size=0.5) +
+#   scale_fill_manual(values = getPalette(colourCount)) +
+#   theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
+#   theme(
+#     # panel.grid.minor.x = element_blank(), 
+#     # panel.grid.major.x = element_blank(),
+#     legend.position = "right",
+#     axis.text.x = element_text(angle = 90, vjust = 0.4)
+#   ) +
+#   labs(title = "Porcentaje de anuncios coincidentes en bases de datos de InsideAirbnb",
+#        subtitle = "Cada línea es una base de datos. 2016-2018",
+#        y = "% coincidencia",
+#        x = "fechas",
+#        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+# dev.off()
 
 # converts to date
 heat.matrix.n.m.p$id2 <- as.Date( paste(20,as.character(heat.matrix.n.m.p$id),sep=""), "%Y%m%d")
 
-png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-02-normalizada.png", sep = ""),width = 1400,height = 600)
+# png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-02-normalizada.png", sep = ""),width = 1400,height = 600)
+png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-02-normalizad-pisos-completos.png", sep = ""),width = 1400,height = 600)
 ggplot(heat.matrix.n.m.p , aes(x = id2, y = value, group = variable,color=variable)) +
   geom_line() +
-  geom_point(size=0.5) +
+  geom_point(size=1) +
   scale_fill_manual(values = getPalette(colourCount)) +
-  scale_x_date(date_breaks = "1 month") +
+  scale_x_date(date_breaks = "1 month",date_labels = "%m-%Y") +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  geom_label(x=as.Date("2018-05-31"),y=40,label="acuerdo",color="#000000") +
   theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
   theme(
     panel.grid.minor.x = element_blank(),
@@ -460,7 +487,40 @@ ggplot(heat.matrix.n.m.p , aes(x = id2, y = value, group = variable,color=variab
     axis.text.x = element_text(angle = 90, vjust = 0.4)
   ) +
   labs(title = "Porcentaje de anuncios coincidentes en bases de datos de InsideAirbnb",
-       subtitle = "Cada línea es una base de datos. 2016-2018",
+       subtitle = "Pisos completos. Cada línea es una base de datos. 2016-2018",
+       y = "% coincidencia",
+       x = "fechas",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
+
+png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos.png", sep = ""),width = 1400,height = 600)
+ggplot() + 
+  # lines
+  geom_line(data=heat.matrix.n.m.p, aes(x = id2, y = value, group = variable),color="#bbbbbb") +
+  # line destacada
+  geom_line(data=filter(heat.matrix.n.m.p,variable=="180609"), aes(x = id2, y = value, group = variable),color="#ddbbbb",size=2) +
+  # points
+  geom_point(data=heat.matrix.n.m.p, aes(x = id2, y = value), size=1,color="#bbbbbb") +
+  geom_point(data=filter(heat.matrix.n.m.p,variable=="180609"), aes(x = id2, y = value), size=2,color="#ddbbbb") +
+  # colors
+  scale_fill_manual(values = getPalette(colourCount)) +
+  # scale
+  scale_x_date(date_breaks = "1 month",date_labels = "%m-%Y") +
+  # anotation
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  geom_label(x=as.Date("2018-05-31"),y=40,label="acuerdo",color="#000000") +
+  # theme
+  theme_minimal(base_family = "Roboto Condensed", base_size = 25) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major = element_line(size=0.6),
+    panel.grid.minor = element_line(size=0.3),
+    # panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 90, vjust = 0.4)
+  ) +
+  labs(title = "Porcentaje de anuncios coincidentes en bases de datos de InsideAirbnb",
+       subtitle = "Pisos completos. Cada línea es una base de datos. 2016-2018",
        y = "% coincidencia",
        x = "fechas",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
