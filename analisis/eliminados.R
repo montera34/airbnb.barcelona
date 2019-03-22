@@ -70,7 +70,7 @@ data_long[data_long$calculated_host_listings_count > 1,]$host.type <- "multiple 
 
 # counts listings per scraping date ----
 dates.count <- data_long %>% filter (exists ==1) %>% group_by(fechab) %>% summarise(anuncios=n())
-
+df <- data.frame(x1 = 2.62, x2 = 3.57, y1 = 21.0, y2 = 15.0)
 png(filename=paste("images/airbnb/eliminados/anuncios-barcelona-por-mes-linea.png", sep = ""),width = 1000,height = 400)
 dates.count  %>%
   ggplot(aes(fechab,anuncios)) + 
@@ -88,16 +88,18 @@ dates.count  %>%
     panel.grid.minor.y = element_blank()
     # legend.position = "bottom"
   ) +
-  labs(title = "Número de anuncios de Airbnb en cada scraping de InsideAirbnb",
+  labs(title = "Número de anuncios de Airbnb en cada descarga de datos de InsideAirbnb",
        subtitle = "Barcelona 2015-2018",
-       y = "número de anuncios",
+       y = "número de anuncios listados",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
   # nota
-  annotate(geom = "text", x = as.Date("2016-01-20"), y = 11500, label = "Cada punto es un scraping de InsideAirbnb", 
-           family = "Roboto Condensed", hjust = 0,size=6) +
-  annotate(geom = "segment", x = as.Date("2017-01-1"), xend = as.Date("2017-04-1"), y = 12000, yend = 17200,
-           color="#999999")
+  annotate(geom = "text", x = as.Date("2017-01-1"), y = 11500, label = "Cada punto es un scraping de InsideAirbnb", 
+           family = "Roboto Condensed", hjust = 1,size=6) +
+  # annotate(geom = "segment", x = as.Date("2017-01-1"), xend = as.Date("2017-04-1"), y = 12000, yend = 17200,
+           # color="#999999") +
+  geom_curve(aes(x = as.Date("2017-01-1"), y = 12000, xend = as.Date("2017-04-8"), yend = 17200), 
+             color="#999999", data =df,  curvature = 0.2)
 dev.off()
 
 # counts listings per scraping date and room type ----
@@ -243,8 +245,9 @@ for (i in 1:length(dates)) {
   print(column.select)
   column.select2 <- paste("d",dates[i+1],sep = "")
   print(column.select2)
+  # debe cumplir condición: está en columna 1 pero no está en 2
   id.removed <- listings.total %>% filter(  (!!sym(column.select)) == 1 & (!!sym(column.select2)) == 0 ) %>% select(id)
-  # sets to 1 if erased in column.select2
+  # sets to 1 if erased and stores it in column.select2 date
   listings.desaparecidos[listings.desaparecidos$id %in% id.removed$id,column.select2] <- 1
 }
 
@@ -363,16 +366,10 @@ desaparecidos.count.host_type  %>%
 dev.off()
 
 # aparecidos o nuevos
-# detects which listings were erased/dissapeared -------------------------------------------------------------------------------
-listings.desaparecidos <- listings.total
+# detects which listings are NEW in each scraping date (compare with previous) -------------------------------------------------------------------------------
+listings.new <- listings.total
 # sets all values to 0
-listings.desaparecidos[,4:30] <- 0
-
-# column.select <- paste("d",dates[1],sep = "")
-# column.select2 <- paste("d",dates[1+1],sep = "")
-# tesx <- listings.total %>% filter(  (!!sym(column.select)) == 1 & (!!sym(column.select2)) == 0 ) %>% select(id)
-# 
-# listings.desaparecidos[listings.desaparecidos$id %in% tesx$id,column.select2] <-33
+listings.new[,4:30] <- 0
 
 for (i in 1:length(dates)) {
   print(i)
@@ -380,27 +377,27 @@ for (i in 1:length(dates)) {
   print(column.select)
   column.select2 <- paste("d",dates[i+1],sep = "")
   print(column.select2)
-  id.removed <- listings.total %>% filter(  (!!sym(column.select)) == 1 & (!!sym(column.select2)) == 0 ) %>% select(id)
-  # sets to 1 if erased in column.select2
-  listings.desaparecidos[listings.desaparecidos$id %in% id.removed$id,column.select2] <- 1
+  # debe cumplir condición: no está en columna 1 pero sí está en 2
+  id.new <- listings.total %>% filter(  (!!sym(column.select)) == 0 & (!!sym(column.select2)) == 1 ) %>% select(id)
+  # sets to 1 if newand stores it in column.select2 date
+  listings.new[listings.new$id %in% id.new$id,column.select2] <- 1
 }
 
 # converts to long format 
-listings.desaparecidos_long <-  listings.desaparecidos %>% gather(fecha, eliminated, 4:30) #starts in 4th column after other variables
+listings.new_long <-  listings.new %>% gather(fecha, new, 4:30) #starts in 4th column after other variables
 # parse date
-listings.desaparecidos_long$fechab <- strapplyc( as.character(listings.desaparecidos_long$fecha), "d([0-9]*)", simplify = TRUE)
-listings.desaparecidos_long$fechab <- as.Date( paste(20,as.character(listings.desaparecidos_long$fechab),sep=""), "%Y%m%d")
+listings.new_long$fechab <- strapplyc( as.character(listings.new_long$fecha), "d([0-9]*)", simplify = TRUE)
+listings.new_long$fechab <- as.Date( paste(20,as.character(listings.new_long$fechab),sep=""), "%Y%m%d")
 # classify type of host
-listings.desaparecidos_long$host.type <- ""
-listings.desaparecidos_long[listings.desaparecidos_long$calculated_host_listings_count == 1,]$host.type <- "single listing"
-listings.desaparecidos_long[listings.desaparecidos_long$calculated_host_listings_count > 1,]$host.type <- "multiple listings"
+listings.new_long$host.type <- ""
+listings.new_long[listings.new_long$calculated_host_listings_count == 1,]$host.type <- "single listing"
+listings.new_long[listings.new_long$calculated_host_listings_count > 1,]$host.type <- "multiple listings"
 
-desaparecidos.count <- listings.desaparecidos_long %>% filter (eliminated ==1) %>% group_by(fechab) %>% summarise(anuncios=n())
-desaparecidos.count.room_type <- listings.desaparecidos_long %>% filter (eliminated ==1) %>% group_by(fechab,room_type) %>% summarise(anuncios=n())
-desaparecidos.count.host_type <- listings.desaparecidos_long %>% filter (eliminated ==1) %>% group_by(fechab,host.type) %>% summarise(anuncios=n())
+new.count <- listings.new_long %>% filter (new ==1) %>% group_by(fechab) %>% summarise(anuncios=n())
+new.count.room_type <- listings.new_long %>% filter (new ==1) %>% group_by(fechab,room_type) %>% summarise(anuncios=n())
+new.count.host_type <- listings.new_long %>% filter (new ==1) %>% group_by(fechab,host.type) %>% summarise(anuncios=n())
 
-# png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-host-type.png", sep = ""),width = 1000,height = 300)
-desaparecidos.count %>%
+new.count %>%
   ggplot () +
   annotate("text",x=as.Date("2018-05-1"),y=1000,label="acuerdo",color="#000000",size=4) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -412,16 +409,15 @@ desaparecidos.count %>%
     panel.grid.minor.y = element_blank(),
     legend.position = "top"
   ) +
-  labs(title = "Número de anuncios desaparecidos",
+  labs(title = "Número de anuncios new",
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "número de anuncios",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
-# dev.off()
 
-# 1 Miramos cuántos son según habitación entre los eliminados
-png(filename=paste("images/airbnb/eliminados/anuncios-eliminados-room-type.png", sep = ""),width = 1000,height = 300)
-desaparecidos.count.room_type  %>%
+# 1 Miramos cuántos son según habitación entre los new
+png(filename=paste("images/airbnb/eliminados/anuncios-new-room-type.png", sep = ""),width = 1000,height = 300)
+new.count.room_type  %>%
   ggplot () +
   geom_col(aes(fechab,anuncios,fill=room_type)) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -432,16 +428,16 @@ desaparecidos.count.room_type  %>%
     panel.grid.minor.y = element_blank(),
     legend.position = "top"
   ) +
-  labs(title = "Número de anuncios desaparecidos según tipo de habitación",
+  labs(title = "Número de anuncios nuevos según tipo de habitación",
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "número de anuncios",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
 
-# 2 Miramos cuál es la proporción de tipo de anuncios según habitación entre los eliminados
-png(filename=paste("images/airbnb/eliminados/anuncios-eliminados-porcentaje-room-type.png", sep = ""),width = 1000,height = 300)
-desaparecidos.count.room_type  %>%
+# 2 Miramos cuál es la proporción de tipo de anuncios según habitación entre los new
+png(filename=paste("images/airbnb/eliminados/anuncios-new-porcentaje-room-type.png", sep = ""),width = 1000,height = 300)
+new.count.room_type  %>%
   ggplot () +
   geom_col(aes(fechab,anuncios,fill=room_type),position = "fill" ) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -452,16 +448,16 @@ desaparecidos.count.room_type  %>%
     panel.grid.minor.y = element_blank(),
     legend.position = "top"
   ) +
-  labs(title = "Porcentaje de anuncios desaparecidos según tipo de habitación",
+  labs(title = "Porcentaje de anuncios nuevos según tipo de habitación",
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "%",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
 
-# 3 Miramos cuál es el número de anuncios según host type entre los eliminados
-png(filename=paste("images/airbnb/eliminados/anuncios-eliminados-host-type.png", sep = ""),width = 1000,height = 300)
-desaparecidos.count.host_type  %>%
+# 3 Miramos cuál es el número de anuncios según host type entre los new
+png(filename=paste("images/airbnb/eliminados/anuncios-new-host-type.png", sep = ""),width = 1000,height = 300)
+new.count.host_type  %>%
   ggplot () +
   geom_col(aes(fechab,anuncios,fill=host.type)) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -472,16 +468,16 @@ desaparecidos.count.host_type  %>%
     panel.grid.minor.y = element_blank(),
     legend.position = "top"
   ) +
-  labs(title = "Número de anuncios desaparecidos según tipo de host",
+  labs(title = "Número de anuncios nuevos según tipo de host",
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "número de anuncios",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
 
-# 4 Miramos cuál es la proporción según habitación entre los eliminados
-png(filename=paste("images/airbnb/eliminados/anuncios-eliminados-porcentaje-host-type.png", sep = ""),width = 1000,height = 300)
-desaparecidos.count.host_type  %>%
+# 4 Miramos cuál es la proporción según habitación entre los new
+png(filename=paste("images/airbnb/eliminados/anuncios-new-porcentaje-host-type.png", sep = ""),width = 1000,height = 300)
+new.count.host_type  %>%
   ggplot () +
   geom_col(aes(fechab,anuncios,fill=host.type),position = "fill" ) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -492,7 +488,7 @@ desaparecidos.count.host_type  %>%
     panel.grid.minor.y = element_blank(),
     legend.position = "top"
   ) +
-  labs(title = "Porcentaje de anuncios desaparecidos según tipo de host",
+  labs(title = "Porcentaje de anuncios nuevos según tipo de host",
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "%",
        x = "fecha",
