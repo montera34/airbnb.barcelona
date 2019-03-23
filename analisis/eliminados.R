@@ -16,7 +16,8 @@ dates <- c("150430","150717","150904","151002","160103","161107","161208","17010
            "180710","180818","180911")
 
 # loop starts
-listings  <- select(as.data.frame(read.delim("data/original/airbnb/150430/listings_summary_barcelona_insideairbnb.csv",sep = ",")),id,room_type,calculated_host_listings_count)
+listings  <- select(as.data.frame(read.delim("data/original/airbnb/150430/listings_summary_barcelona_insideairbnb.csv",sep = ",")),
+                    id,room_type,calculated_host_listings_count,neighbourhood_group)
 # names(listings) <- "id"
 listings.total <- listings
 
@@ -32,12 +33,14 @@ for (i in 1:length(dates)) {
   print(paste("id:",i))
   print(paste("fecha: ",dates[i]))
   # Adds rows to the original
-  neo <- select(as.data.frame(read.delim(paste("data/original/airbnb/",dates[i],"/listings_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")),id,room_type,calculated_host_listings_count)
+  neo <- select(as.data.frame(read.delim(paste("data/original/airbnb/",dates[i],"/listings_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")),
+                id,room_type,calculated_host_listings_count,neighbourhood_group)
   # names(neo) <- "id"
   print(paste("neo a leer",nrow(neo)))
   # TODO. Solamente inserta los que no estaban ya. Si el calculated_host_listings_count ha camiado (el usuario ahora tiene más anuncios) no lo actualizaría
   # Se podría guardar el host_id y luego mirar si ha tenido más de una anuncio en algún momento
-  neo2 <- select(as.data.frame(neo[!neo$id %in% listings.total$id,]),id,room_type,calculated_host_listings_count)
+  neo2 <- select(as.data.frame(neo[!neo$id %in% listings.total$id,]),
+                 id,room_type,calculated_host_listings_count,neighbourhood_group)
   # names(neo2) <- "id"
   print(paste("neo2 a insertar",nrow(neo2)))
   # añade los anuncios al listado original
@@ -49,7 +52,8 @@ for (i in 1:length(dates)) {
 for (i in 1:length(dates)) {
   print(i)
   # Adds rows to the original
-  neo <- select(as.data.frame(read.delim(paste("data/original/airbnb/",dates[i],"/listings_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")),id,room_type)
+  neo <- select(as.data.frame(read.delim(paste("data/original/airbnb/",dates[i],"/listings_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")),
+                id,room_type,calculated_host_listings_count,neighbourhood_group)
   # names(neo) <- "id"
   print(paste("n listings:",nrow(neo)))
   # sets to 0 for all
@@ -61,12 +65,13 @@ for (i in 1:length(dates)) {
 # Translate room type values
 levels(listings.total$room_type) <- c("Piso completo","Habitación","Habitación compartida")
 
-# converts to long format -----
-data_long <- listings.total %>% gather(fecha, exists, 4:30) #starts in 4th column after other variables
+# converts to long format ------------------------------------------------------------------------------
+data_long <- listings.total %>% gather(fecha, exists, 5:31) #starts in 5th column after other variables
 # parse date
 data_long$fechab <- strapplyc( as.character(data_long$fecha), "d([0-9]*)", simplify = TRUE)
 data_long$fechab <- as.Date( paste(20,as.character(data_long$fechab),sep=""), "%Y%m%d")
-# classify type of host
+
+# classify by type of host ----------------------------------------------------------------------------
 data_long$host.type <- ""
 data_long[data_long$calculated_host_listings_count == 1,]$host.type <- "1 anuncio"
 data_long[data_long$calculated_host_listings_count > 1,]$host.type <- "varios anuncios"
@@ -85,7 +90,7 @@ data_long[data_long$calculated_host_listings_count > 2 & data_long$calculated_ho
 data_long[data_long$calculated_host_listings_count > 5 & data_long$calculated_host_listings_count < 15,]$host.type.m <- "6-14 anuncios"
 data_long[data_long$calculated_host_listings_count > 14,]$host.type.m <- "15 o más anuncios"
 
-# counts listings per scraping date ----
+# counts listings per scraping date ----------------------------------------------------------------------------
 dates.count <- data_long %>% filter (exists ==1) %>% group_by(fechab) %>% summarise(anuncios=n())
 df <- data.frame(x1 = 2.62, x2 = 3.57, y1 = 21.0, y2 = 15.0)
 png(filename=paste("images/airbnb/eliminados/anuncios-barcelona-por-mes-linea.png", sep = ""),width = 1000,height = 400)
@@ -118,6 +123,74 @@ dates.count  %>%
   geom_curve(aes(x = as.Date("2017-01-1"), y = 12000, xend = as.Date("2017-04-8"), yend = 17200), 
              color="#999999", data =df,  curvature = 0.2)
 dev.off()
+
+
+# counts listings por barrio --------------------------------------------------------------------
+dates.count.barrio <- data_long %>% filter (exists ==1) %>% group_by(fechab,neighbourhood_group) %>% summarise(anuncios=n())
+
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio.png", sep = ""),width = 1000,height = 600)
+dates.count.barrio %>% 
+  ggplot () +
+  annotate("text",x=as.Date("2018-05-25"),y=5000,label="acuerdo",color="#000000",
+           size=5,family = "Roboto Condensed",hjust=1) +
+  geom_point(aes(fechab,anuncios,group=neighbourhood_group,color=neighbourhood_group),size=1.5) +
+  geom_line(aes(fechab,anuncios,group=neighbourhood_group,color=neighbourhood_group),size=1.5) +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  # barrios labels
+  geom_text(data=filter(dates.count.barrio,fechab==as.Date("2018-09-11")), 
+            aes(fechab+5,anuncios,label=neighbourhood_group),
+            size=4,
+            hjust=0,
+            family = "Roboto Condensed") +
+  ylim(0, max(dates.count.barrio$anuncios)) +
+  xlim(as.Date(min(dates.count.barrio$fechab)),as.Date("2020-06-4")) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    legend.position = "none"
+  ) +
+  labs(title = "Número de anuncios de Airbnb por barrio en Barcelona",
+       subtitle = "2015-2018 (publicados en cada scraping de InsideAirbnb)",
+       y = "número de anuncios",
+       x = "fecha",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
+
+# counts listings por barrio y room type--------------------------------------------------------------
+dates.count.barrio.room <- data_long %>% filter (exists ==1) %>% group_by(fechab,neighbourhood_group,room_type) %>% summarise(anuncios=n())
+
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio-room.png", sep = ""),width = 1000,height = 600)
+dates.count.barrio %>% 
+  ggplot () +
+  annotate("text",x=as.Date("2018-05-25"),y=5000,label="acuerdo",color="#000000",
+           size=5,family = "Roboto Condensed",hjust=1) +
+  geom_point(aes(fechab,anuncios,group=neighbourhood_group,color=neighbourhood_group),size=1.5) +
+  geom_line(aes(fechab,anuncios,group=neighbourhood_group,color=neighbourhood_group),size=1.5) +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  # barrios labels
+  geom_text(data=filter(dates.count.barrio,fechab==as.Date("2018-09-11")), 
+            aes(fechab+5,anuncios,label=neighbourhood_group),
+            size=4,
+            hjust=0,
+            family = "Roboto Condensed") +
+  ylim(0, max(dates.count.barrio$anuncios)) +
+  xlim(as.Date(min(dates.count.barrio$fechab)),as.Date("2020-06-4")) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    legend.position = "none"
+  ) +
+  labs(title = "Número de anuncios de Airbnb por barrio y tipo de alojamiento en Barcelona",
+       subtitle = "2015-2018 (publicados en cada scraping de InsideAirbnb)",
+       y = "número de anuncios",
+       x = "fecha",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
+
 
 # counts listings per scraping date and room type --------------------------------------------------------------------
 dates.count.room_type <- data_long %>% filter (exists ==1) %>% group_by(fechab,room_type) %>% summarise(anuncios=n())
@@ -329,7 +402,7 @@ dev.off()
 # detects which listings were erased/dissapeared -------------------------------------------------------------------------------
 listings.desaparecidos <- listings.total
 # sets all values to 0
-listings.desaparecidos[,4:30] <- 0
+listings.desaparecidos[,5:31] <- 0
 
 # column.select <- paste("d",dates[1],sep = "")
 # column.select2 <- paste("d",dates[1+1],sep = "")
@@ -350,7 +423,7 @@ for (i in 1:length(dates)) {
 }
 
 # cuántas veces "desapareció" cada anuncios en el periodo estudiado -------
-listings.desaparecidos$sum <- rowSums(listings.desaparecidos[,4:30])
+listings.desaparecidos$sum <- rowSums(listings.desaparecidos[,5:31])
 table(listings.desaparecidos$sum)
 # De los 63.704 anuncios que han pasado por la plataforma 15.147 (24%) siempre han estado presentes desde que se publicaron alguna vez. 
 # 39.389 (62%) desaparecieron una vez. 
@@ -361,7 +434,7 @@ table(listings.desaparecidos$sum)
 filter(listings.desaparecidos, d180609 == 1 & (d180710 == 1 | d180818 == 1 | d180911  == 1) ) %>% select(room_type,calculated_host_listings_count,d180710,d180818,d180911 )
 
 # converts to long format -----
-listings.desaparecidos_long <-  listings.desaparecidos %>% gather(fecha, eliminated, 4:30) #starts in 4th column after other variables
+listings.desaparecidos_long <-  listings.desaparecidos %>% gather(fecha, eliminated, 5:31) #starts in 4th column after other variables
 # parse date
 listings.desaparecidos_long$fechab <- strapplyc( as.character(listings.desaparecidos_long$fecha), "d([0-9]*)", simplify = TRUE)
 listings.desaparecidos_long$fechab <- as.Date( paste(20,as.character(listings.desaparecidos_long$fechab),sep=""), "%Y%m%d")
@@ -482,7 +555,7 @@ dev.off()
 # detects which listings are NEW in each scraping date (compare with previous) -------------------------------------------------------------------------------
 listings.new <- listings.total
 # sets all values to 0
-listings.new[,4:30] <- 0
+listings.new[,5:31] <- 0
 
 for (i in 1:length(dates)) {
   print(i)
@@ -497,7 +570,7 @@ for (i in 1:length(dates)) {
 }
 
 # converts to long format 
-listings.new_long <-  listings.new %>% gather(fecha, new, 4:30) #starts in 4th column after other variables
+listings.new_long <-  listings.new %>% gather(fecha, new, 5:31) #starts in 5th column after other variables
 # parse date
 listings.new_long$fechab <- strapplyc( as.character(listings.new_long$fecha), "d([0-9]*)", simplify = TRUE)
 listings.new_long$fechab <- as.Date( paste(20,as.character(listings.new_long$fechab),sep=""), "%Y%m%d")
