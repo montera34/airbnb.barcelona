@@ -58,6 +58,9 @@ for (i in 1:length(dates)) {
   listings.total[listings.total$id %in% neo$id,paste("d",dates[i],sep="")] <- 1
 }
 
+# Translate room type values
+levels(listings.total$room_type) <- c("Piso completo","Habitación","Habitación compartida")
+
 # converts to long format -----
 data_long <- listings.total %>% gather(fecha, exists, 4:30) #starts in 4th column after other variables
 # parse date
@@ -79,11 +82,8 @@ data_long$host.type.m <- ""
 data_long[data_long$calculated_host_listings_count == 1,]$host.type.m <- "1 anuncio"
 data_long[data_long$calculated_host_listings_count == 2,]$host.type.m <- "2 anuncios"
 data_long[data_long$calculated_host_listings_count > 2 & data_long$calculated_host_listings_count < 6,]$host.type.m <- "3-5 anuncios"
-data_long[data_long$calculated_host_listings_count > 5,]$host.type.m <- "6 o más anuncios"
-
-
-# Translate room type values
-levels(data_long$room_type) <- c("Piso completo","Habitación","Habitación compartida")
+data_long[data_long$calculated_host_listings_count > 5 & data_long$calculated_host_listings_count < 15,]$host.type.m <- "6-14 anuncios"
+data_long[data_long$calculated_host_listings_count > 14,]$host.type.m <- "15 o más anuncios"
 
 # counts listings per scraping date ----
 dates.count <- data_long %>% filter (exists ==1) %>% group_by(fechab) %>% summarise(anuncios=n())
@@ -270,6 +270,56 @@ dates.count.host.room.type %>% filter(!room_type=="Habitación compartida") %>%
   facet_wrap(~host.type)
 dev.off()
 
+
+# separado por tipo de host multiple y alojamiento -----------------------------------
+dates.count.host.room.type.m <- data_long %>% filter (exists ==1) %>% group_by(fechab,room_type,host.type.m) %>% summarise(anuncios=n())
+
+# timeline
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-host-m-room-type.png", sep = ""),width = 1000,height = 300)
+dates.count.host.room.type.m %>% filter(!room_type=="Habitación compartida") %>%
+  ggplot () +
+  geom_line(aes(fechab,anuncios,group=host.type.m,color=host.type.m),size=1.5) +
+  annotate("text",x=as.Date("2018-05-15"),y=100,label="acuerdo",color="#000000",size=4, hjust = 1) +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  ylim(0, max(dates.count.host.room.type.m$anuncios)) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 14) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    legend.position = "top"
+  ) +
+  labs(title = "Número de anuncios en cada scraping de InsideAirbnb por tipo de host",
+       subtitle = "Barcelona 2015-2018",
+       y = "número de anuncios",
+       x = "fecha",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       color="El host gestiona") +
+  facet_wrap(~room_type)
+dev.off()
+
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-room-host-m-type.png", sep = ""),width = 1000,height = 300)
+dates.count.host.room.type.m %>% filter(!room_type=="Habitación compartida") %>%
+  ggplot () +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  geom_line(aes(fechab,anuncios,group=room_type,color=room_type),size=1.5) +
+  annotate("text",x=as.Date("2018-05-15"),y=100,label="acuerdo",color="#000000",size=4, hjust = 1 ) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 14) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    legend.position = "top"
+  ) +
+  labs(title = "Número de anuncios en cada scraping de InsideAirbnb por tipo de host",
+       subtitle = "Barcelona 2015-2018",
+       y = "número de anuncios",
+       x = "fecha",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       color="El host gestiona") +
+  facet_wrap(~host.type.m)
+dev.off()
+
 # data_long[data_long$exists == 1 & data_long$fechab > "2018-04-01",] %>%
 # ggplot(aes(x = as.factor(fecha), y = as.factor(id))) +
 #   # geom_dotplot(binaxis = "y", stackdir = "center", position = "dodge",alpha=0.3,size=0.1)
@@ -299,7 +349,18 @@ for (i in 1:length(dates)) {
   listings.desaparecidos[listings.desaparecidos$id %in% id.removed$id,column.select2] <- 1
 }
 
-# converts to long format 
+# cuántas veces "desapareció" cada anuncios en el periodo estudiado -------
+listings.desaparecidos$sum <- rowSums(listings.desaparecidos[,4:30])
+table(listings.desaparecidos$sum)
+# De los 63.704 anuncios que han pasado por la plataforma 15.147 (24%) siempre han estado presentes desde que se publicaron alguna vez. 
+# 39.389 (62%) desaparecieron una vez. 
+# 6.843 (10%) desaparecieron 2 veces.
+# 2.325 (4%) desparecieron entre 3 y 7 veces.
+
+# ¿cuántos anuncios desparecieron en junio y luego volvieron a desaperecer? 198
+filter(listings.desaparecidos, d180609 == 1 & (d180710 == 1 | d180818 == 1 | d180911  == 1) ) %>% select(room_type,calculated_host_listings_count,d180710,d180818,d180911 )
+
+# converts to long format -----
 listings.desaparecidos_long <-  listings.desaparecidos %>% gather(fecha, eliminated, 4:30) #starts in 4th column after other variables
 # parse date
 listings.desaparecidos_long$fechab <- strapplyc( as.character(listings.desaparecidos_long$fecha), "d([0-9]*)", simplify = TRUE)
@@ -350,7 +411,8 @@ desaparecidos.count.room_type  %>%
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "número de anuncios",
        x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       fill="Tipo de alojamiento")
 dev.off()
 
 # 2 Miramos cuál es la proporción de tipo de anuncios según habitación entre los eliminados
@@ -370,7 +432,8 @@ desaparecidos.count.room_type  %>%
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "%",
        x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       fill="Tipo de alojamiento")
 dev.off()
 
 # 3 Miramos cuál es el número de anuncios según host type entre los eliminados
@@ -390,7 +453,8 @@ desaparecidos.count.host_type  %>%
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "número de anuncios",
        x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       fill="El host gestiona")
 dev.off()
 
 # 4 Miramos cuál es la proporción según habitación entre los eliminados
@@ -410,7 +474,8 @@ desaparecidos.count.host_type  %>%
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "%",
        x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       fill="El host gestiona")
 dev.off()
 
 # aparecidos o nuevos
@@ -480,7 +545,8 @@ new.count.room_type  %>%
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "número de anuncios",
        x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       fill="Tipo de alojamiento")
 dev.off()
 
 # 2 Miramos cuál es la proporción de tipo de anuncios según habitación entre los new
@@ -500,7 +566,8 @@ new.count.room_type  %>%
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "%",
        x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       fill="Tipo de alojamiento")
 dev.off()
 
 # 3 Miramos cuál es el número de anuncios según host type entre los new
@@ -520,7 +587,8 @@ new.count.host_type  %>%
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "número de anuncios",
        x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       fill="El host gestiona")
 dev.off()
 
 # 4 Miramos cuál es la proporción según habitación entre los new
@@ -540,7 +608,8 @@ new.count.host_type  %>%
        subtitle = "Barcelona 2015-2018 (entre fechas consecutivas de scraping)",
        y = "%",
        x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       fill="El host gestiona")
 dev.off()
 
 
@@ -641,7 +710,7 @@ listings.total %>% filter(d180911 == 1) %>%
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
 
-# Plots: when they were frist found. Bars -----
+# Plots: when they were first found. Bars -----
 
 # barra  coloreado según cuándo fue encontrado y filtrando por fecha concreta
 png(filename=paste("images/airbnb/eliminados/eliminados-06.png", sep = ""),width = 1000,height = 750)
@@ -740,7 +809,7 @@ write.csv(nodes, file="temp/nodes-listings-post-2017.csv")
 
 # Analyses ony Entire home/apartment ads --------
 listings.total.all <- listings.total # saves original
-listings.total <- filter(listings.total.all,room_type == "Entire home/apt") #only entire homes
+listings.total <- filter(listings.total.all,room_type == "Piso completo") #only entire homes
 
 
 # Creates matrix
@@ -986,7 +1055,8 @@ ggplot(heat.matrix.n.m.p, aes(x = date, y = value, group = id,color=variable)) +
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
 
-png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos.png", sep = ""),width = 1400,height = 600)
+# Líneas: coincidencia en % de anuncios de pisos completos entre bases de datos de Airbnb
+png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos.png", sep = ""),width = 1000,height = 500)
 ggplot() + 
   # lines
   geom_line(data=heat.matrix.n.m.p, aes(x = date, y = value, group = id),color="#bbbbbb") +
@@ -999,26 +1069,38 @@ ggplot() +
   # destaca puntos mayo
   geom_point(data=filter(heat.matrix.n.m.p,id=="180514"), aes(x = date, y = value), size=2,color="#bb9999") +
   geom_text(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-05-01") & date < as.Date("2018-07-01")),
-            aes(x = date, y = value+3,label=paste(value,"%",sep="")),size=4)+
+            aes(x = date+10, y = value+3,label=paste(value,"%",sep="")),size=5,family = "Roboto Condensed")+
   # colors
   scale_fill_manual(values = getPalette(colourCount)) +
   # scale
-  scale_x_date(date_breaks = "1 month",date_labels = "%m-%Y") +
-  # anotation
+  scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y") +
+  # anotations
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  annotate("text",x=as.Date("2018-05-15"),y=40,label="acuerdo",color="#000000",size=4) +
-  annotate("text",x=as.Date("2018-06-30"),y=87,label="El 29% desapareció",color="#000000",size=4) +
+  annotate("text",x=as.Date("2018-05-26"),y=40,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
+  annotate("text",x=as.Date("2018-06-1"),y=87,label="El 29% desapareció",color="#000000",size=5,hjust=0,family = "Roboto Condensed") +
+  # nota 71%
+  annotate(geom = "text", x = as.Date("2018-01-1"), y = 50, label = "El 71% de los anuncios de mayo seguía en junio", 
+           family = "Roboto Condensed", hjust = 1,size=6) +
+  geom_curve(aes(x = as.Date("2018-01-1"), y = 50, xend = as.Date("2018-06-6"), yend = 70.5), 
+             color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+             ) +
+  # nota fecha de scraping
+  annotate(geom = "text", x = as.Date("2018-01-1"), y = 103, label = "Fecha del scraping de mayo 2018", 
+           family = "Roboto Condensed", hjust = 1,size=6) +
+  geom_curve(aes(x = as.Date("2018-01-1"), y = 100, xend = as.Date("2018-05-10"), yend = 100), 
+             color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+  ) +
   # theme
-  theme_minimal(base_size = 25) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 25) +
   theme(
     panel.grid.minor.x = element_blank(),
     panel.grid.major = element_line(size=0.6),
-    panel.grid.minor = element_line(size=0.3),
+    panel.grid.major.x = element_blank(),
     # panel.grid.major.x = element_blank(),
     legend.position = "right",
     axis.text.x = element_text(angle = 90, vjust = 0.4)
   ) +
-  labs(title = "Porcentaje de anuncios de pisos completos coincidentes entre bases de datos de InsideAirbnb",
+  labs(title = "Pisos completos coincidentes entre bases de datos de InsideAirbnb",
        subtitle = "Cada línea es una base de datos. 2016-2018",
        y = "% coincidencia",
        x = "fecha",
