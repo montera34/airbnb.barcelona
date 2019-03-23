@@ -72,7 +72,15 @@ data_long$host.type.m <- ""
 data_long[data_long$calculated_host_listings_count == 1,]$host.type.m <- "1 anuncio"
 data_long[data_long$calculated_host_listings_count == 2,]$host.type.m <- "2 anuncios"
 data_long[data_long$calculated_host_listings_count == 3,]$host.type.m <- "3 anuncios"
-data_long[data_long$calculated_host_listings_count > 3,]$host.type.m <- "4 o más anuncios"
+data_long[data_long$calculated_host_listings_count == 4,]$host.type.m <- "4 anuncios"
+data_long[data_long$calculated_host_listings_count > 4,]$host.type.m <- "5 o más anuncios"
+
+data_long$host.type.m <- ""
+data_long[data_long$calculated_host_listings_count == 1,]$host.type.m <- "1 anuncio"
+data_long[data_long$calculated_host_listings_count == 2,]$host.type.m <- "2 anuncios"
+data_long[data_long$calculated_host_listings_count > 2 & data_long$calculated_host_listings_count < 6,]$host.type.m <- "3-5 anuncios"
+data_long[data_long$calculated_host_listings_count > 5,]$host.type.m <- "6 o más anuncios"
+
 
 # Translate room type values
 levels(data_long$room_type) <- c("Piso completo","Habitación","Habitación compartida")
@@ -212,7 +220,8 @@ dates.count.host.type.m %>%
        subtitle = "2015-2018 (publicados en cada scraping de InsideAirbnb)",
        y = "número de anuncios",
        x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb",
+       color="El host gestiona")
 dev.off()
 
 # separado por tipo de host y alojamiento ----
