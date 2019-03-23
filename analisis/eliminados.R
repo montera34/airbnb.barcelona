@@ -65,8 +65,17 @@ data_long$fechab <- strapplyc( as.character(data_long$fecha), "d([0-9]*)", simpl
 data_long$fechab <- as.Date( paste(20,as.character(data_long$fechab),sep=""), "%Y%m%d")
 # classify type of host
 data_long$host.type <- ""
-data_long[data_long$calculated_host_listings_count == 1,]$host.type <- "single listing"
-data_long[data_long$calculated_host_listings_count > 1,]$host.type <- "multiple listings"
+data_long[data_long$calculated_host_listings_count == 1,]$host.type <- "1 anuncio"
+data_long[data_long$calculated_host_listings_count > 1,]$host.type <- "varios anuncios"
+
+data_long$host.type.m <- ""
+data_long[data_long$calculated_host_listings_count == 1,]$host.type.m <- "1 anuncio"
+data_long[data_long$calculated_host_listings_count == 2,]$host.type.m <- "2 anuncios"
+data_long[data_long$calculated_host_listings_count == 3,]$host.type.m <- "3 anuncios"
+data_long[data_long$calculated_host_listings_count > 3,]$host.type.m <- "4 o más anuncios"
+
+# Translate room type values
+levels(data_long$room_type) <- c("Piso completo","Habitación","Habitación compartida")
 
 # counts listings per scraping date ----
 dates.count <- data_long %>% filter (exists ==1) %>% group_by(fechab) %>% summarise(anuncios=n())
@@ -90,7 +99,7 @@ dates.count  %>%
   ) +
   labs(title = "Número de anuncios de Airbnb en cada descarga de datos de InsideAirbnb",
        subtitle = "Barcelona 2015-2018",
-       y = "número de anuncios listados",
+       y = "número de anuncios",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
   # nota
@@ -102,7 +111,7 @@ dates.count  %>%
              color="#999999", data =df,  curvature = 0.2)
 dev.off()
 
-# counts listings per scraping date and room type ----
+# counts listings per scraping date and room type --------------------------------------------------------------------
 dates.count.room_type <- data_long %>% filter (exists ==1) %>% group_by(fechab,room_type) %>% summarise(anuncios=n())
 
 # todos los anuncios
@@ -128,11 +137,13 @@ dev.off()
 
 # separado por tipo de alojamiento ----
 png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-room-type.png", sep = ""),width = 1000,height = 300)
-dates.count.room_type %>% filter(!room_type=="Shared room") %>%
+dates.count.room_type %>% filter(!room_type=="Habitación compartida") %>%
   ggplot () +
   annotate("text",x=as.Date("2018-04-15"),y=1000,label="acuerdo",color="#000000",size=4) +
+  geom_point(aes(fechab,anuncios,group=room_type,color=room_type),size=1.5) +
+  geom_line(aes(fechab,anuncios,group=room_type,color=room_type),size=1.5) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  geom_step(aes(fechab,anuncios,group=room_type,color=room_type),size=1.5) +
+  ylim(0, max(dates.count.room_type$anuncios)) +
   theme_minimal(base_family = "Roboto Condensed",base_size = 14) +
   theme(
     panel.grid.minor.x = element_blank(),
@@ -140,8 +151,8 @@ dates.count.room_type %>% filter(!room_type=="Shared room") %>%
     panel.grid.minor.y = element_blank(),
     legend.position = "top"
   ) +
-  labs(title = "Número de anuncios en cada scraping de InsideAirbnb por tipo de alojamiento",
-       subtitle = "Barcelona 2015-2018",
+  labs(title = "Número de anuncios de Airbnb por tipo de alojamiento en Barcelona",
+       subtitle = "2015-2018 (publicados en cada scraping de InsideAirbnb)",
        y = "número de anuncios",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
@@ -160,8 +171,10 @@ png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-host-type.png", se
 dates.count.host.type %>%
   ggplot () +
   annotate("text",x=as.Date("2018-05-1"),y=1000,label="acuerdo",color="#000000",size=4) +
+  geom_line(aes(fechab,anuncios,group=host.type,color=host.type),size=1.5) +
+  geom_point(aes(fechab,anuncios,group=host.type,color=host.type),size=1.5) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  geom_step(aes(fechab,anuncios,group=host.type,color=host.type),size=1.5) +
+  ylim(0, max(dates.count.host.type$anuncios)) +
   theme_minimal(base_family = "Roboto Condensed",base_size = 14) +
   theme(
     panel.grid.minor.x = element_blank(),
@@ -169,8 +182,34 @@ dates.count.host.type %>%
     panel.grid.minor.y = element_blank(),
     legend.position = "top"
   ) +
-  labs(title = "Número de anuncios en cada scraping de InsideAirbnb por tipo de host",
-       subtitle = "Barcelona 2015-2018",
+  labs(title = "Número de anuncios de Airbnb por tipo de host en Barcelona",
+       subtitle = "2015-2018 (publicados en cada scraping de InsideAirbnb)",
+       y = "número de anuncios",
+       x = "fecha",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
+
+# separado por tipo de host com más clasificaciones ----
+dates.count.host.type.m <- data_long %>% filter (exists ==1) %>% group_by(fechab,host.type.m) %>% summarise(anuncios=n())
+
+# timeline
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-host-type-1-2-3-more.png", sep = ""),width = 1000,height = 300)
+dates.count.host.type.m %>%
+  ggplot () +
+  annotate("text",x=as.Date("2018-05-1"),y=1000,label="acuerdo",color="#000000",size=4) +
+  geom_line(aes(fechab,anuncios,group=host.type.m,color=host.type.m),size=1.5) +
+  geom_point(aes(fechab,anuncios,group=host.type.m,color=host.type.m),size=1.5) +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  ylim(0, max(dates.count.host.type.m$anuncios)) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 14) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    legend.position = "top"
+  ) +
+  labs(title = "Número de anuncios de Airbnb por tipo de host en Barcelona",
+       subtitle = "2015-2018 (publicados en cada scraping de InsideAirbnb)",
        y = "número de anuncios",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
@@ -181,11 +220,11 @@ dates.count.host.room.type <- data_long %>% filter (exists ==1) %>% group_by(fec
 
 # timeline
 png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-host-room-type.png", sep = ""),width = 1000,height = 300)
-dates.count.host.room.type %>% filter(!room_type=="Shared room") %>%
+dates.count.host.room.type %>% filter(!room_type=="Habitación compartida") %>%
   ggplot () +
   annotate("text",x=as.Date("2018-05-15"),y=1000,label="acuerdo",color="#000000",size=4) +
+  geom_line(aes(fechab,anuncios,group=host.type,color=host.type),size=1.5) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  geom_step(aes(fechab,anuncios,group=host.type,color=host.type),size=1.5) +
   theme_minimal(base_family = "Roboto Condensed",base_size = 14) +
   theme(
     panel.grid.minor.x = element_blank(),
@@ -202,7 +241,7 @@ dates.count.host.room.type %>% filter(!room_type=="Shared room") %>%
 dev.off()
 
 png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-room-host-type.png", sep = ""),width = 1000,height = 300)
-dates.count.host.room.type %>% filter(!room_type=="Shared room") %>%
+dates.count.host.room.type %>% filter(!room_type=="Habitación compartida") %>%
   ggplot () +
   annotate("text",x=as.Date("2018-05-15"),y=1000,label="acuerdo",color="#000000",size=4) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -258,8 +297,8 @@ listings.desaparecidos_long$fechab <- strapplyc( as.character(listings.desaparec
 listings.desaparecidos_long$fechab <- as.Date( paste(20,as.character(listings.desaparecidos_long$fechab),sep=""), "%Y%m%d")
 # classify type of host
 listings.desaparecidos_long$host.type <- ""
-listings.desaparecidos_long[listings.desaparecidos_long$calculated_host_listings_count == 1,]$host.type <- "single listing"
-listings.desaparecidos_long[listings.desaparecidos_long$calculated_host_listings_count > 1,]$host.type <- "multiple listings"
+listings.desaparecidos_long[listings.desaparecidos_long$calculated_host_listings_count == 1,]$host.type <- "1 anuncio"
+listings.desaparecidos_long[listings.desaparecidos_long$calculated_host_listings_count > 1,]$host.type <- "varios anuncios"
 
 desaparecidos.count <- listings.desaparecidos_long %>% filter (eliminated ==1) %>% group_by(fechab) %>% summarise(anuncios=n())
 desaparecidos.count.room_type <- listings.desaparecidos_long %>% filter (eliminated ==1) %>% group_by(fechab,room_type) %>% summarise(anuncios=n())
