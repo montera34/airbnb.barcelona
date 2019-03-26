@@ -678,7 +678,6 @@ dev.off()
 
 # Mapas de coropletas ---------------------------------------------------------------------
 library(tmap)
-library(geojsonio)
 
 barrios@data$id <- rownames(barrios@data)
 sf.points <- fortify(barrios.sf, region="id")
@@ -752,7 +751,7 @@ dev.off()
 # Ratio anuncios / 100 viviendas. 2017-2018
 png(filename="images/airbnb/mapa-coropletas-ratio-anuncios-100viv-barcelona-201709-201809.png",width = 1000,height = 600)
 tm_shape(barrios.df) +
-  tm_polygons(col=c("ratio2017_listings","ratio2018_listings"), 
+    tm_polygons(col=c("ratio2017_listings","ratio2018_listings"), 
               palette = colores, breaks = breaks.ratio,
               title = "ratio anuncios / 100 viviendas", 
               border.alpha = 1, lwd = 0.2, legend.show = T, legend.outside = T) +
@@ -763,3 +762,11 @@ tm_shape(barrios.df) +
   tm_legend(legend.text.size = 1, 
             legend.title.size = 2) 
 dev.off()  
+
+# Prepare for cartograma -----------------------------------------------------
+library(geojsonio)
+
+barrios_json <- geojson_json(barrios.df)
+# must convert to spatial before exporting
+writeOGR(as(barrios.df, 'Spatial'), "tmp/test_geojson", layer="barrios", driver="GeoJSON")
+
