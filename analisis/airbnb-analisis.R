@@ -135,6 +135,34 @@ ggplot(data = airbnb.barrio.room_type.2,aes(x = reorder(neighbourhood,suma), y =
   coord_flip()
 dev.off()
 
+png(filename="images/airbnb/hab-viv-barras-airbnb-distritos-barcelona-201809-facet.png",width = 1100,height = 1100)
+ggplot(data = airbnb.barrio.room_type.2,aes(x = reorder(neighbourhood,suma), y = count, fill=room_type)) +
+  # "reverse" es la clave para reordenar las barras y que coincida con leyenda https://github.com/tidyverse/ggplot2/issues/1837
+  geom_col(position = position_stack(reverse = TRUE)) +
+  scale_y_continuous(expand = c(0, 30)) + #limits = c(0,950),
+  theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
+  theme(
+    panel.grid.minor.y = element_blank(), panel.grid.major.y = element_blank(),
+    legend.position="top"
+  ) +
+  labs(title = "Habitaciones y viviendas de Airbnb por barrios en Barcelona",
+       subtitle = "Septiembre 2018",
+       y = "número de anuncios",
+       x = NULL,
+       caption = "Datos: Insideairbnb. Gráfico: lab.montera34.com/airbnb",
+       fill="tipo de alojamiento") +
+  # # partial text
+  # geom_text(aes(label = count,group=room_type), 
+  #           data=airbnb.barrio.room_type.2[airbnb.barrio.room_type.2$count > 50,], 
+  #           position = position_stack(reverse = TRUE,vjust = 0.5),size=3,color="#FFFFFF") +
+  # total text
+  geom_text(aes(label = suma, y = count+50),
+            position = "dodge",
+            size=3,color="#888888") +
+  coord_flip() +
+  facet_wrap(~room_type)
+dev.off()
+
 
 # slope graph 2017-2018. Por barrios y tipo alojamiento ----------------------------------------------------------------------------------
 #  Compare evolution
@@ -616,7 +644,7 @@ plot1v <- ggplot(por_barrios.viviendas,aes(x = reorder(neighbourhood, -pos_ratio
   coord_flip()
 
 # Barras numero de anuncios 
-plot2v <- ggplot(por_barrios.viviendas,aes(x = reorder(neighbourhood, -pos_ratio2018), y = anuncios2018)) + #order by Value or by -pos_ratio2018
+plot2v <- ggplot(por_barrios.viviendas,aes(x = reorder(neighbourhood, -pos_ratio2018), y = anuncios2018, fill=room_type)) + #order by Value or by -pos_ratio2018
   geom_col(position = "dodge")+
   scale_y_reverse(limits = c(2200,0), expand = c(0,0)) + #invert axis
   theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
@@ -629,13 +657,13 @@ plot2v <- ggplot(por_barrios.viviendas,aes(x = reorder(neighbourhood, -pos_ratio
     axis.text.y = element_blank(), #uncomment to plot the names of barrios
     panel.grid.minor.y = element_blank(),
     panel.grid.major.y = element_blank(),
-    legend.position="bottom",
+    legend.position="none",
     plot.margin = unit(c(0.3,0,0.4,4), "cm")
   ) +
   
-  labs(title = "Presencia de Airbnb en barrios de Barcelona por nº de anuncios",
-       subtitle = "Número de anuncios de Airbnb",
-       y = "nº anuncios Airbnb",
+  labs(title = "Anuncios de viviendas completas en barrios de Barcelona",
+       subtitle = "Número de anuncios de viviendas completas de Airbnb",
+       y = "nº anuncios viviendas Airbnb",
        x = NULL,
        caption = "") +
   geom_text(aes(label = anuncios2018,y = anuncios2018+5),
@@ -646,3 +674,92 @@ plot2v <- ggplot(por_barrios.viviendas,aes(x = reorder(neighbourhood, -pos_ratio
 png(filename="images/airbnb/barras-mariposa-n-y-ratio-viviendas-completas-airbnb-barrios-barcelona-201819.png",width = 900,height = 1000)
 grid.arrange(plot2v,plot1v,ncol=2,widths=c(2,3))
 dev.off()
+
+
+# Mapas de coropletas ---------------------------------------------------------------------
+library(tmap)
+library(geojsonio)
+
+barrios@data$id <- rownames(barrios@data)
+sf.points <- fortify(barrios.sf, region="id")
+# correr gpclibPermit() si es necesario para que gpclibPermitStatus() salga true. instalar install.packages("gpclib") si es necesario. 
+gpclibPermit()
+# Visto e nhttps://stackoverflow.com/questions/21093399/how-to-turn-gpclibpermit-to-true
+# convert to character
+por_barrios.viviendas$neighbourhood <- as.character(por_barrios.viviendas$neighbourhood)
+# adds data
+barrios.df <- left_join(sf.points, por_barrios.viviendas,by = c("N_Barri" = "neighbourhood"))
+
+tm_polygons(col = c("PP_pct", "PSOE_pct", "Ps_pct", "Cs_pct", "IU_pct"), style = "fixed", 
+            palette = colores5, breaks = breaks,
+            title = "% sobre censo", 
+            border.alpha = 0, lwd = 0, legend.show = T, legend.outside = T) 
+
+
+colores <- c("#ededed", "#0cb2ff")
+
+breaks.n <- c(seq(0,2000,by = 250))
+
+png(filename="images/airbnb/mapa-coropletas-numero-anuncios-barcelona-201809.png",width = 500,height = 600)
+tm_shape(barrios.df) +
+  tm_polygons(col="total2018",
+              palette = colores, breaks = breaks.n,
+              title = "anuncios", 
+              border.alpha = 1, lwd = 0.2, legend.show = T, legend.outside = T) +
+  tm_layout(between.margin = 5, frame = FALSE,
+            fontfamily = "Roboto Condensed", 
+            title = "Anuncios airbnb" ,
+            title.fontface = "bold") +
+  tm_legend(legend.text.size = 1, 
+            legend.title.size = 2) 
+dev.off()
+
+
+# Ratio anuncios / 100 viviendas
+# breaks.ratio <- c(0,5,10,15,20,25)
+breaks.ratio <- c(0,2.5,5,7.5,10,12.5,15,17.5,20,22.5)
+
+png(filename="images/airbnb/mapa-coropletas-ratio-anuncios-100viv-barcelona-201809.png",width = 500,height = 600)
+tm_shape(barrios.df) +
+  tm_polygons(col="ratio2018_listings",
+              palette = colores, breaks = breaks.ratio,
+              title = "ratio anuncios / 100 viviendas", 
+              border.alpha = 1, lwd = 0.2, legend.show = T, legend.outside = T) +
+  tm_layout(between.margin = 5, frame = FALSE,
+            fontfamily = "Roboto Condensed", 
+            title = "Ratio anuncios airbnb por 100 domicilios" ,
+            title.fontface = "bold") +
+  tm_legend(legend.text.size = 1, 
+            legend.title.size = 2) 
+dev.off()
+
+
+# Ratio anuncios vivienda completa / 100 viviendas
+png(filename="images/airbnb/mapa-coropletas-ratio-anuncios-vivcompletas-100viv-barcelona-201809.png",width = 500,height = 600)
+tm_shape(barrios.df) +
+  tm_polygons(col="ratio2018_room_type",
+              palette = colores, # breaks = breaks.ratio,
+              title = "ratio anuncios / 100 viviendas", 
+              border.alpha = 1, lwd = 0.2, legend.show = T, legend.outside = T) +
+  tm_layout(between.margin = 5, frame = FALSE,
+            fontfamily = "Roboto Condensed", 
+            title = "Ratio anuncios viv. completa airbnb por 100 domicilios" ,
+            title.fontface = "bold") +
+  tm_legend(legend.text.size = 1, 
+            legend.title.size = 2) 
+dev.off()
+
+# Ratio anuncios / 100 viviendas. 2017-2018
+png(filename="images/airbnb/mapa-coropletas-ratio-anuncios-100viv-barcelona-201709-201809.png",width = 1000,height = 600)
+tm_shape(barrios.df) +
+  tm_polygons(col=c("ratio2017_listings","ratio2018_listings"), 
+              palette = colores, breaks = breaks.ratio,
+              title = "ratio anuncios / 100 viviendas", 
+              border.alpha = 1, lwd = 0.2, legend.show = T, legend.outside = T) +
+  tm_layout(between.margin = 5, frame = FALSE,
+            fontfamily = "Roboto Condensed", 
+            title = c("2017. Ratio anuncios airbnb por 100 domicilios","2018. Ratio anuncios airbnb por 100 domicilios"),
+            title.fontface = "bold") +
+  tm_legend(legend.text.size = 1, 
+            legend.title.size = 2) 
+dev.off()  
