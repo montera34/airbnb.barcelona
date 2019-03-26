@@ -376,7 +376,7 @@ dates.count.room_type %>% filter(!room_type=="Habitación compartida") %>%
 dev.off()
 
 # anuncios de pisos completos
-dates.count.room_type %>% filter(room_type=="Entire home/apt") %>%
+dates.count.room_type %>% filter(room_type=="Vivienda completa") %>%
   ggplot () + 
   geom_col(aes(fechab,anuncios))
 
@@ -1217,7 +1217,7 @@ dev.off()
 
 # Plots coincidencias normalizadas
 
-# fechas sin parsear
+# fechas sin parsear -----
 # png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-01-normalizada.png", sep = ""),width = 1400,height = 600)
 # ggplot(heat.matrix.n.m.p , aes(x = id, y = value, group = variable,color=variable)) +
 #   geom_line() +
@@ -1237,7 +1237,7 @@ dev.off()
 #        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 # dev.off()
 
-# converts to date
+# converts to date -----
 heat.matrix.n.m.p$date <- as.Date( paste(20,as.character(heat.matrix.n.m.p$variable),sep=""), "%Y%m%d")
 # heat.matrix.n.m.p$id <- as.factor(heat.matrix.n.m.p$id)
 
@@ -1266,7 +1266,7 @@ ggplot(heat.matrix.n.m.p, aes(x = date, y = value, group = id,color=variable)) +
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
 
-# Líneas: coincidencia en % de anuncios de pisos completos entre bases de datos de Airbnb
+# Líneas: coincidencia en % de anuncios de pisos completos entre bases de datos de Airbnb --------------------
 png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos.png", sep = ""),width = 1000,height = 500)
 ggplot() + 
   # lines
@@ -1279,20 +1279,25 @@ ggplot() +
   geom_point(data=heat.matrix.n.m.p, aes(x = date, y = value), size=1,color="#bbbbbb") +
   # destaca puntos mayo
   geom_point(data=filter(heat.matrix.n.m.p,id=="180514"), aes(x = date, y = value), size=2,color="#bb9999") +
-  geom_text(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-05-01") & date < as.Date("2018-07-01")),
+  # mete % en cada punto de mayo
+  geom_text(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-01-01") & date < as.Date("2018-09-01")),
             aes(x = date+10, y = value+3,label=paste(value,"%",sep="")),size=5,family = "Roboto Condensed")+
+  # fechas de scrapings
+  geom_text(data=filter(heat.matrix.n.m.p, value ==100 ),
+            aes(x = date, y = 41,label=date),
+            size=5,family = "Roboto Condensed",angle = 90,color ="#333333" )+
   # colors
   scale_fill_manual(values = getPalette(colourCount)) +
   # scale
   scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y") +
   # anotations
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  annotate("text",x=as.Date("2018-05-26"),y=40,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
+  annotate("text",x=as.Date("2018-05-26"),y=57,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
   annotate("text",x=as.Date("2018-06-1"),y=87,label="El 29% desapareció",color="#000000",size=5,hjust=0,family = "Roboto Condensed") +
   # nota 71%
-  annotate(geom = "text", x = as.Date("2018-01-1"), y = 50, label = "El 71% de los anuncios de mayo seguía en junio", 
+  annotate(geom = "text", x = as.Date("2018-01-1"), y = 55, label = "El 71% de los anuncios de mayo seguía en junio", 
            family = "Roboto Condensed", hjust = 1,size=6) +
-  geom_curve(aes(x = as.Date("2018-01-1"), y = 50, xend = as.Date("2018-06-6"), yend = 70.5), 
+  geom_curve(aes(x = as.Date("2018-01-1"), y = 55, xend = as.Date("2018-06-6"), yend = 70.5), 
              color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
              ) +
   # nota fecha de scraping
@@ -1309,11 +1314,137 @@ ggplot() +
     panel.grid.major.x = element_blank(),
     # panel.grid.major.x = element_blank(),
     legend.position = "right",
-    axis.text.x = element_text(angle = 90, vjust = 0.4)
+    axis.text.x = element_blank()
+    # axis.text.x = element_text(angle = 90, vjust = 0.4)
   ) +
-  labs(title = "Pisos completos coincidentes entre bases de datos de InsideAirbnb",
-       subtitle = "Cada línea es una base de datos. 2016-2018",
-       y = "% coincidencia",
+  labs(title = "Porcentaje de pisos completos de Airbnb entre scrapings de InsideAirbnb",
+       subtitle = "Cada línea es un scraping. 2016-2018. Barcelona",
+       y = "% coincidencia entre scrapings",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
+
+# Explicación 01 -------
+heat.matrix.m.p$date <- as.Date( paste(20,as.character(heat.matrix.n.m.p$variable),sep=""), "%Y%m%d")
+
+
+# png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos.png", sep = ""),width = 1000,height = 500)
+ggplot(heat.matrix.m.p , aes(x = date, y = value, group = id),fill="#bbbbbb") +
+  # geom_line() +
+  # geom_point(size=0.5) +
+  # geom_text(aes(label=value),size=3,color="#000000") +
+  # geom_line(heat.matrix.m.p , aes(x = id, y = value, group = variable)) +
+  # line destacada
+  geom_line(data=filter(heat.matrix.m.p,id=="180514"), aes(x = date, y = value, group =id),color="#ddbbbb",size=2) +
+  # line destacada
+  # geom_line(data=filter(heat.matrix.n.m.p,id=="180818"), aes(x = date, y = value, group = id),color="#bbddbb",size=2) +
+  # points
+  # geom_point(data=heat.matrix.n.m.p, aes(x = date, y = value), size=1,color="#bbbbbb") +
+  # destaca puntos mayo
+  geom_point(data=filter(heat.matrix.m.p,id=="180514"), aes(x = date, y = value), size=2,color="#bb9999") +
+  # mete n en cada punto de mayo
+  geom_text( data=filter(heat.matrix.m.p, id=="180514"),
+            aes(x = date, 
+                y = value+100,
+                label=value,
+                family = "Roboto Condensed"),size=4 )+
+  # fechas de scrapings
+  # geom_text(data=filter(heat.matrix.n.m.p, value ==100 ),
+            # aes(x = date, y = 41,label=date),
+            # size=5,family = "Roboto Condensed",angle = 90,color ="#333333" )+
+  # colors
+  scale_fill_manual(values = getPalette(colourCount)) +
+  # scale
+  # scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y") +
+  # anotations
+  # geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  # annotate("text",x=as.Date("2018-05-26"),y=57,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
+  # annotate("text",x=as.Date("2018-06-1"),y=87,label="El 29% desapareció",color="#000000",size=5,hjust=0,family = "Roboto Condensed") +
+  # nota 71%
+  # annotate(geom = "text", x = as.Date("2018-01-1"), y = 55, label = "El 71% de los anuncios de mayo seguía en junio", 
+  #          family = "Roboto Condensed", hjust = 1,size=6) +
+  # geom_curve(aes(x = as.Date("2018-01-1"), y = 55, xend = as.Date("2018-06-6"), yend = 70.5), 
+  #            color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+  # ) +
+  # nota fecha de scraping
+  # annotate(geom = "text", x = as.Date("2018-01-1"), y = 103, label = "Fecha del scraping de mayo 2018", 
+  #          family = "Roboto Condensed", hjust = 1,size=6) +
+  # geom_curve(aes(x = as.Date("2018-01-1"), y = 100, xend = as.Date("2018-05-10"), yend = 100), 
+  #            color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+  # ) +
+  # theme
+  theme_minimal(base_family = "Roboto Condensed",base_size = 25) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major = element_line(size=0.6),
+    panel.grid.major.x = element_blank(),
+    # panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_blank()
+    # axis.text.x = element_text(angle = 90, vjust = 0.4)
+  ) +
+  labs(title = "Número de pisos completos coincidentes de Airbnb entre scrapings de InsideAirbnb",
+       subtitle = "Mayo 2018. Barcelona",
+       y = "% coincidencia entre scrapings",
+       x = "fecha",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+# dev.off()
+
+# Explicación 02: Líneas: coincidencia en % de anuncios de pisos completos entre bases de datos de Airbnb explicación--------------------
+png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos_02.png", sep = ""),width = 1000,height = 500)
+ggplot() + 
+  # lines
+  # geom_line(data=heat.matrix.n.m.p, aes(x = date, y = value, group = id),color="#bbbbbb") +
+  # line destacada
+  geom_line(data=filter(heat.matrix.n.m.p,id=="180514"), aes(x = date, y = value, group =id),color="#ddbbbb",size=2) +
+  # line destacada
+  # geom_line(data=filter(heat.matrix.n.m.p,id=="180818"), aes(x = date, y = value, group = id),color="#bbddbb",size=2) +
+  # points
+  # geom_point(data=heat.matrix.n.m.p, aes(x = date, y = value), size=1,color="#bbbbbb") +
+  # destaca puntos mayo
+  geom_point(data=filter(heat.matrix.n.m.p,id=="180514"), aes(x = date, y = value), size=2,color="#bb9999") +
+  # mete % en cada punto de mayo
+  geom_text(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-01-01") & date < as.Date("2018-09-01")),
+            aes(x = date+10, y = value+3,label=paste(value,"%",sep="")),size=5,family = "Roboto Condensed")+
+  # fechas de scrapings
+  geom_text(data=filter(heat.matrix.n.m.p, value ==100 ),
+            aes(x = date, y = 41,label=date),
+            size=5,family = "Roboto Condensed",angle = 90,color ="#333333" )+
+  # colors
+  scale_fill_manual(values = getPalette(colourCount)) +
+  # scale
+  scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y") +
+  # anotations
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  annotate("text",x=as.Date("2018-05-26"),y=57,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
+  annotate("text",x=as.Date("2018-06-1"),y=87,label="El 29% desapareció",color="#000000",size=5,hjust=0,family = "Roboto Condensed") +
+  # nota 71%
+  annotate(geom = "text", x = as.Date("2018-01-1"), y = 55, label = "El 71% de los anuncios de mayo seguía en junio", 
+           family = "Roboto Condensed", hjust = 1,size=6) +
+  geom_curve(aes(x = as.Date("2018-01-1"), y = 55, xend = as.Date("2018-06-6"), yend = 70.5), 
+             color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+  ) +
+  # nota fecha de scraping
+  annotate(geom = "text", x = as.Date("2018-01-1"), y = 103, label = "Fecha del scraping de mayo 2018", 
+           family = "Roboto Condensed", hjust = 1,size=6) +
+  geom_curve(aes(x = as.Date("2018-01-1"), y = 100, xend = as.Date("2018-05-10"), yend = 100), 
+             color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+  ) +
+  # theme
+  theme_minimal(base_family = "Roboto Condensed",base_size = 25) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major = element_line(size=0.6),
+    panel.grid.major.x = element_blank(),
+    # panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_blank()
+    # axis.text.x = element_text(angle = 90, vjust = 0.4)
+  ) +
+  labs(title = "Porcentaje de pisos completos de Airbnb entre scrapings de InsideAirbnb",
+       subtitle = "Mayo 2018. Barcelona",
+       y = "% coincidencia entre scrapings",
+       x = "fecha",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
+
