@@ -13,7 +13,7 @@ library(ggthemes) #install ggthemes
 # Loads dates with listings data
 dates <- c("150430","150717","150904","151002","160103","161107","161208","170104","170209","170306","170408","170507",
            "170605","170706","170806","170912","171007","171113","171209","180117","180207","180412","180514","180609",
-           "180710","180818","180911")
+           "180710","180818","181010","181107","181210","190114","190206","190308")
 
 # loop starts
 listings  <- select(as.data.frame(read.delim("data/original/airbnb/150430/listings_summary_barcelona_insideairbnb.csv",sep = ",")),
@@ -67,7 +67,7 @@ for (i in 1:length(dates)) {
 levels(listings.total$room_type) <- c("Piso completo","Habitación","Habitación compartida")
 
 # converts to long format ------------------------------------------------------------------------------
-data_long <- listings.total %>% gather(fecha, exists, 6:32) #starts in 5th column after other variables
+data_long <- listings.total %>% gather(fecha, exists, 6:37) #starts in 5th column after other variables
 # parse date
 data_long$fechab <- strapplyc( as.character(data_long$fecha), "d([0-9]*)", simplify = TRUE)
 data_long$fechab <- as.Date( paste(20,as.character(data_long$fechab),sep=""), "%Y%m%d")
@@ -121,7 +121,7 @@ dates.count  %>%
            family = "Roboto Condensed", hjust = 1,size=6) +
   # annotate(geom = "segment", x = as.Date("2017-01-1"), xend = as.Date("2017-04-1"), y = 12000, yend = 17200,
            # color="#999999") +
-  geom_curve(aes(x = as.Date("2017-01-1"), y = 12000, xend = as.Date("2017-04-8"), yend = 17200), 
+  geom_curve(aes(x = as.Date("2017-01-01"), y = 12000, xend = as.Date("2017-04-08"), yend = 17200), 
              color="#999999", data =df,  curvature = 0.2)
 dev.off()
 
@@ -333,7 +333,7 @@ dates.count.room_type <- data_long %>% filter (exists ==1) %>% group_by(fechab,r
 
 # todos los anuncios
 png(filename=paste("images/airbnb/eliminados/anuncios-por-mes.png", sep = ""),width = 1000,height = 200)
-  dates.count.room_type %>%
+dates.count.room_type %>%
   ggplot(aes(fechab,anuncios)) + 
     geom_col() +
     annotate("text",x=as.Date("2018-05-15"),y=21000,label="acuerdo",color="#000000",size=4) +
@@ -1327,8 +1327,7 @@ dev.off()
 # Explicación 01 -------
 heat.matrix.m.p$date <- as.Date( paste(20,as.character(heat.matrix.n.m.p$variable),sep=""), "%Y%m%d")
 
-
-# png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos.png", sep = ""),width = 1000,height = 500)
+png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos_01.png", sep = ""),width = 1000,height = 500)
 ggplot(heat.matrix.m.p , aes(x = date, y = value, group = id),fill="#bbbbbb") +
   # geom_line() +
   # geom_point(size=0.5) +
@@ -1388,7 +1387,7 @@ ggplot(heat.matrix.m.p , aes(x = date, y = value, group = id),fill="#bbbbbb") +
        y = "% coincidencia entre scrapings",
        x = "fecha",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
-# dev.off()
+dev.off()
 
 # Explicación 02: Líneas: coincidencia en % de anuncios de pisos completos entre bases de datos de Airbnb explicación--------------------
 png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos_02.png", sep = ""),width = 1000,height = 500)
