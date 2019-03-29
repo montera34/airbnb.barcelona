@@ -4,105 +4,157 @@
 # Load libraries ----
 library(gsubfn)
 library(tidyverse)
+library(R.utils)
+library(reshape2) #to melt
+library(RColorBrewer)
 
 location <- "Barcelona"
 date_abr <- "20180911"
 date <- "11 sept 2018"
 
+# create dataframe with dates and number of listings from different sources
+sources <-data.frame(matrix(ncol = 6  ))
+names(sources)  <- c("date","source","listings","entire_home","private_room","shared_room")
+sources[1,] <- c("2019-03-29","AirDNA",18760,11368,7241,151)
+# sources[4,] <- c("2018-06-4","Datahippo (active)",1431,1066,358,7)
+# sources[6,] <- c("2018-09-15","Ayuntamiento", 1289,1163,126,0)
 
-# Load reviews and listings -----
-# reviews <- read.delim("data/original/airbnb/180818/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-reviews <- read.delim("data/original/airbnb/180911/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# listings  <- read.delim("data/original/airbnb/180818/listings_summary_barcelona_insideairbnb.csv",sep = ",")
-listings  <- read.delim("data/original/airbnb/180911/listings_summary_barcelona_insideairbnb.csv",sep = ",")
+sources$date <- as.Date(sources$date)
+# converts to numeric columns
+sources[,3:6] <- lapply(sources[,3:6], function(x) as.numeric(as.character(x)))
+# Convert data to long-form with 'melt' from the reshape2 package.
+sources_melt <- melt(sources, id.vars=c("date","source"),
+                     measure.vars=c("entire_home", "private_room","shared_room"))
 
-# ids <- c(listings$id,listings2018$id)
 
 # ------ Merge reviews and remove duplicates --------
 # Loads dates with review data
 dates <- c("150430","150717","150904","151002","160103","161107","161208","170104","170209","170306","170408","170507",
            "170605","170706","170806","170912","171007","171113","171209","180117","180207","180412","180514","180609",
-           "180710","180818")
-# Las fechas tienen que estar de la más reciente a la más antigua, si no no funcionar el loop siguiente
-dates <- (dates)
+           "180710","180818","181010","181107","181210","190114","190206","190308")
+# Las fechas tienen que estar de la más reciente a la más antigua, si no no funciona el loop siguiente
+dates <- rev(dates)
 
-# Loop para ir comparando las reviews e insertando las de los listings que no están.
+# Loop revisado
+reviews <-data.frame(matrix(ncol = 3  ))
+names(reviews)  <- c("listing_id","date","scrapdate")
+
+listings <-data.frame(matrix(ncol = 1  ))
+names(listings)  <- c("id")
+
+# loads newest listings and reviews files
+listings_total <- read.delim("data/original/airbnb/190308/listings_summary_barcelona_insideairbnb.csv", sep = ",")
+# listings_total <- read.delim("data/original/airbnb/180911/listings_summary_barcelona_insideairbnb.csv", sep = ",")
+# reviews_total<- read.delim("data/original/airbnb/180911/reviews_summary_barcelona_insideairbnb.csv", sep = ",")
+
+# Loop para ir comparando las reviews y listings e insertando las que no están en Barcelona ----------------------------
+# Este loop crea varios dataframes:
+# -reviews no repetidas (versión reducida y otra con todas las variables)
+# -listings no repetidos (versión reducida y otra con todas las variables)
 for (i in 1:length(dates)) {
-  # name <- as.data.frame(assign(paste("reviews",i,sep = ""),4))
-  print (i)
-  print (dates[i])
-  # Create dataframe with reviews of that day
-  # assign(paste("reviews",i,sep = ""), read.delim(paste("data/original/airbnb/",dates[i],"/reviews_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")) 
+# for (i in 1:2) {
+  print(dates[i])
+  # Loads reviews of that day in temp dataframe
+  reviews_temp <- read.delim(paste("data/original/airbnb/",dates[i],"/reviews_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")
+  # Stores date of scraping in new variable
+  reviews_temp$scrapdate <- dates[i]
   # Adds rows to the original review file
+  # only stores reviews from listings that were not in previous dataframe.
+  # It asumes that it is not possible to remove reviews
   reviews <- rbind(reviews,
-                   read.delim(paste("data/original/airbnb/",dates[i],"/reviews_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")[!(read.delim(paste("data/original/airbnb/",dates[i],"/reviews_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")$listing_id %in% reviews$listing_id),]
-                   )
-  print(nrow(reviews))
+                   reviews_temp[!(reviews_temp$listing_id %in% reviews$listing_id),]
+                  )
+  # Loads reviews (all variables included) of that day in temp dataframe
+  # reviews_total_temp <- read.delim(gzfile(paste("data/original/airbnb/",dates[i],"/reviews_summary_barcelona_insideairbnb.csv",sep="")),
+  #                                  sep = ",")
+  # reviews_total<- rbind(reviews_total,
+  #                       reviews_total_temp[!(reviews_total_temp$id %in% reviews_total$id),]
+  #                 )
+  
+  # Loads listings  of that day in temp dataframe
+  listings_temp <- read.delim(paste("data/original/airbnb/",dates[i],"/listings_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")
+  # print(table(listings_temp$room_type))
+  # only stores listings that were not in the dataframe
+  # stores listigns that _____ with only two variables
+  listings <- rbind(listings,
+                    select(listings_temp[!(listings_temp$id %in% listings$id),], id)
+  )
+  # stores listings with all the variables (well, the .csv.gz has even more variables) that were not before
+  listings_total <- rbind(listings_total, listings_temp[!(listings_temp$id %in% listings_total$id),])
+  
+  print(paste("reviews: ", nrow(reviews), sep=""))
+  # print(paste("reviews_total_temp: ", nrow(reviews_total_temp), sep=""))
+  # print(paste("reviews_total: ", nrow(reviews_total), sep=""))
+  print(paste("listings: ",nrow(listings), sep=""))
+  print(paste("listings_temp: ", nrow(listings_temp), sep=""))
+  print(paste("listings_total: ", nrow(listings_total), sep=""))
+  print("-------------")
 }
 
-# reviews2 <- read.delim("data/original/airbnb/150904/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# reviews3 <- read.delim("data/original/airbnb/161107/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# reviews4 <- read.delim("data/original/airbnb/170912/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# reviews5 <- read.delim("data/original/airbnb/171113/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# reviews6 <- read.delim("data/original/airbnb/171209/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# reviews7 <- read.delim("data/original/airbnb/180117/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# reviews8 <- read.delim("data/original/airbnb/180412/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# reviews9 <- read.delim("data/original/airbnb/180609/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# reviews10<- read.delim("data/original/airbnb/180710/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-# reviews11 <- read.delim("data/original/airbnb/180818/reviews_summary_barcelona_insideairbnb.csv",sep = ",")
-
-# reviews <- rbind(reviews,reviews2[!(reviews2$listing_id %in% reviews$listing_id),])
-# reviews <- rbind(reviews,reviews3[!(reviews3$listing_id %in% reviews$listing_id),])
-# reviews <- rbind(reviews,reviews4[!(reviews4$listing_id %in% reviews$listing_id),])
-# reviews <- rbind(reviews,reviews5[!(reviews5$listing_id %in% reviews$listing_id),])
-# reviews <- rbind(reviews,reviews6[!(reviews6$listing_id %in% reviews$listing_id),])
-# reviews <- rbind(reviews,reviews7[!(reviews7$listing_id %in% reviews$listing_id),])
-# reviews <- rbind(reviews,reviews8[!(reviews8$listing_id %in% reviews$listing_id),])
-# reviews <- rbind(reviews,reviews9[!(reviews9$listing_id %in% reviews$listing_id),])
-# reviews <- rbind(reviews,reviews10[!(reviews10$listing_id %in% reviews$listing_id),])
-# reviews <- rbind(reviews,reviews11[!(reviews11$listing_id %in% reviews$listing_id),])
-
-# To merge few review files -----
-# de 1 que no están en 2
-# db1_not_in_2 <- reviews[!(reviews$id %in% reviews2$id),]
-# db1_in_2 <- reviews[reviews$id %in% reviews2$id,]
-# de 2 que no están en 1
-db2_not_in_1 <- reviews2[!(reviews2$listing_id %in% reviews$listing_id),]
-# db2_in_1 <- reviews2[reviews2$id %in% reviews$id,]
-reviews <- rbind(reviews,db2_not_in_1)
-
-# from 3 not in merged
-db3_not_in_1 <- reviews3[!(reviews3$listing_id %in% reviews$listing_id),]
-reviews <- rbind(reviews,db3_not_in_1)
-# from 4 not in merged
-db4_not_in_1 <- reviews4[!(reviews4$listing_id %in% reviews$listing_id),]
-reviews <- rbind(reviews,db4_not_in_1)
-# from 5 not in merged
-db5_not_in_1 <- reviews5[!(reviews5$id %in% reviews$id),]
-reviews <- rbind(reviews,db5_not_in_1)
-# from 6 not in merged
-db6_not_in_1 <- reviews6[!(reviews6$id %in% reviews$id),]
-reviews <- rbind(reviews,db6_not_in_1)
-
+# removes not used dataframes
+rm(reviews_temp)
+rm(listings_temp)
+rm(reviews_total_temp)
 
 # ------ Process review to insert year, month, day, hour ------------------
 reviews$year <- as.numeric(strapplyc( as.character(reviews$date), "([0-9]*).*", simplify = TRUE))
 reviews$month <- as.numeric(strapplyc( as.character(reviews$date), "[0-9]*-([0-9]*)-[0-9]*", simplify = TRUE))
 reviews$day <- as.numeric(strapplyc( as.character(reviews$date), ".*[0-9]*-[0-9]*-([0-9]*)", simplify = TRUE))
-# Create date field
+# Parse date and create date field
 reviews$datex <- as.Date(reviews$date)
 
-# Sve data if needed
-save(reviews ,file="data/output/airbnb/180911/temp/reviews-summary-barcelona-insideairbnb-merged-2010-20180911.Rda")
-write.csv(reviews, file="data/output/airbnb/180911/reviews-summary-barcelona-insideairbnb-2010-20180911.csv")
+# Save data if needed
+save(reviews, file="data/output/airbnb/180911/tmp/reviews-summary-barcelona-insideairbnb-merged-2010-20190308.Rda")
+write.csv(reviews, file="data/output/airbnb/180911/reviews-summary-barcelona-insideairbnb-2010-20190308.csv")
 
-# ------ Load data in case data are already produced------------------
-# load("data/original/airbnb/180818/temp/reviews_summary_barcelona_insideairbnb.Rda")
+# Insert room_type in every review
+reviews <- reviews %>% left_join(select(listings_total, id, room_type), by= c("listing_id" = "id"))
+
+# translate room type
+levels(reviews$room_type) <- c("Piso completo","Habitación","Habitación compartida")
+
+# Save data in R format -----
+# save(reviews ,file="data/output/reviews-donostia-airbnb-insideairbnb-2017.Rda")
+save(reviews, file="data/output/airbnb/180911/tmp/reviews-with-listings-data-barcelona-airbnb-insideairbnb-2010-201903.Rda")
+save(listings, file="data/output/airbnb/180911/tmp/listings-barcelona-airbnb-insideairbnb-2010-201903.Rda")
+
+
+# ------ Load reviews data in case data are already produced------------------
+# load("data/output/airbnb/180911/tmp/reviews-barcelona-airbnb-insideairbnb-2010-2018.Rda")
+# load("data/output/airbnb/180911/tmp/listings-barcelona-airbnb-insideairbnb-2010-2018.Rda")
 reviews$fix <- 1
 
-# Change this list of listings to select only a particular kind of listing
+# Change this list of listings to select only a particular kind of listing ------------------
 # listings <- data.frame(unique(reviews$listing_id))
 # colnames(listings) <- "id"
+
+# reviews per year
+table(reviews$year)
+# 2009   2010   2011   2012   2013   2014   2015   2016   2017   2018 
+#    2    197   2265  10143  33898  94151 197166 261343 332731 191065 
+
+# Creates results data frame:
+results <- data.frame(matrix(ncol = 5,nrow = 108  ))
+# names(results)  <- c("date","listings","entire_home","entire_home2","private_room","private_room2","shared_room","shared_room2","not_listed")
+names(results)  <- c("date","listings","entire_home","private_room","shared_room")
+
+k <- 1
+# for ( i in as.list(levels(reviews$year))) {
+for ( i in 2011:2019 ) {
+  for ( j in 1:12) {
+    paste(print(i),print(j),sep = "-")
+    print(length(unique(reviews[reviews$year==i & reviews$month==j,]$listing_id)))
+    print( as.Date( paste(i,j,1,sep = "-") ) )
+    results$date[k] <- as.Date(paste(i,j,1,sep = "-"),origin="1970-01-01")
+    results$listings[k] <- length(unique(reviews[reviews$year==i & reviews$month==j & !is.na(reviews$date),]$listing_id))
+    results$entire_home[k] <- length(unique(reviews[reviews$year==i & reviews$month==j & reviews$room_type == "Piso completo" & !is.na(reviews$date),]$listing_id))
+    results$private_room[k] <- length(unique(reviews[reviews$year==i & reviews$month==j & reviews$room_type == "Habitación" & !is.na(reviews$date),]$listing_id))
+    results$shared_room[k] <- length(unique(reviews[reviews$year==i & reviews$month==j & reviews$room_type == "Habitación compartida" & !is.na(reviews$date),]$listing_id))
+    k <- k+1
+  }
+}
+
+results$date <- as.Date(as.numeric(results$date),origin="1970-01-01")
 
 # ------ Analyze reviews----------
 plot(reviews$datex,reviews$fix)
@@ -149,7 +201,7 @@ dev.off()
 # ------ Single strip each point is a review. One year analyzed ------
 # Only display listings included in a predefined listings data.frame (for example, 
 #  listings in a location or belonging to a certain list of hosts)
-png(filename="images/airbnb/reviews/airbnb-reviews-donostia-pormes-2016-b.png",width = 800,height = 400)
+png(filename="images/airbnb/reviews/airbnb-reviews-barcelona-pormes-2016-b.png",width = 800,height = 400)
 ggplot(reviews[reviews$year==2016 & reviews$listing_id %in% unique(listings$id),], aes(month,year)) +
   theme_minimal(base_family = "Roboto", base_size = 10) +
   theme(
@@ -190,7 +242,7 @@ dev.off()
 
 # ------ Single strip each point is a review. Full period analyzed, faceted in years ------
 # Only display listings included in a predefined listings data.frame
-png(filename="images/airbnb/reviews/airbnb-reviews-donostia-2012-2017-b.png",width = 800,height = 400)
+png(filename="images/airbnb/reviews/airbnb-reviews-barcelona-2012-2017-b.png",width = 800,height = 400)
 ggplot(reviews[reviews$listing_id %in% unique(listings$id) & !reviews$year==2011,], aes(month,fix)) +
   theme_minimal(base_family = "Roboto", base_size = 10) +
   theme(
@@ -201,7 +253,7 @@ ggplot(reviews[reviews$listing_id %in% unique(listings$id) & !reviews$year==2011
     axis.text.y=element_blank()
   ) +
   geom_point(aes(),position = "jitter", alpha=0.03) +
-  labs(title = "Airbnb reviews por mes y año. 2016. Donostia - San Sebastián",
+  labs(title = "Airbnb reviews por mes y año. 2016. Barcelona",
        subtitle = "",
        x = "Review date",
        y = "",
@@ -231,7 +283,8 @@ ggplot(reviews, aes(month,factor(listing_id))) +
 # ------ Reviews per trimester histogram ------
 png(filename="images/airbnb/reviews/airbnb-reviews-trimestral-barelona-2011-2017.png",width = 800,height = 400)
 ggplot(reviews[reviews$listing_id %in% unique(listings$id) & !reviews$year==2010 & !reviews$year==2018,],
-       aes(reviews[reviews$listing_id %in% unique(listings$id) & !reviews$year==2010 & !reviews$year==2018,]$month)) + 
+       aes(reviews[reviews$listing_id %in% unique(listings$id) & !reviews$year==2010 & !reviews$year==2018,]$month)) +
+# ggplot(reviews, aes(reviews$month)) +
   theme_minimal(base_family = "Roboto", base_size = 10) +
   theme(
     panel.grid.major.x = element_blank(),
@@ -283,11 +336,14 @@ res2 <- reviews[reviews$listing_id %in% unique(listings$id) & !reviews$year==201
   summarise(count=n())
 
 cbPalette <- c("#dddddd","#cccccc","#bbbbbb","#aaaaaa","#999999","#666666","#333333")
+cbPalette.inv <- colorRampPalette( c( "#333333", "#dddddd" ) )( 7 )
+
+windowsFonts(Times=windowsFont("Roboto Condensed"))
 
 png(filename="images/airbnb/reviews/airbnb-reviews-por-mes-stacked-barcelona-2011-2017.png",width = 800,height = 600)
 ggplot(res2,aes(x = month, y = count,fill = fct_rev(factor(year)))) + 
-  scale_fill_manual(values = cbPalette) +
-  theme_minimal(base_family = "Roboto", base_size = 10) +
+  scale_fill_manual(values = cbPalette.inv) +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 10) +
   theme(
     panel.grid.minor.x = element_blank(), 
     panel.grid.minor.y = element_blank(),
@@ -295,13 +351,15 @@ ggplot(res2,aes(x = month, y = count,fill = fct_rev(factor(year)))) +
     legend.title=element_blank()
   ) +
   scale_x_continuous(breaks=seq(1,12,1))+
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
   geom_bar(stat="identity") +
   labs(title = "Reviews por mes en Airbnb en Barcelona 2011-2017",
        subtitle = "",
        x = "Mes",
        y = "Número de reviews",
        caption = "Efecto Airbnb. lab.montera34.com. Data: InsideAirbnb")  +
-  geom_text(aes(label = count),
+  geom_text(
+            aes(label = count),
             position = position_stack(vjust = 0.5),size=3,color="#FFFFFF")
 dev.off()
 
@@ -310,7 +368,7 @@ res2b <- reviews[reviews$listing_id %in% unique(listings$id) & !reviews$year==20
   group_by(month,year) %>% 
   summarise(count=n())
 
-cbPalette2 <- c("#dddddd","#cccccc","#bbbbbb","#aaaaaa","#999999","#666666","#333333","#111111")
+cbPalette2 <- cbPalette.inv <- colorRampPalette( c( "#dddddd","#111111" ) )( 8 )
 
 png(filename="images/airbnb/reviews/airbnb-reviews-por-mes-stacked-barcelona-2011-2018.png",width = 800,height = 600)
 ggplot(res2b,aes(x = month, y = count,fill = fct_rev(factor(year)))) + 
@@ -387,7 +445,7 @@ ggplot() +
     axis.text.y=element_blank()
   ) +
   geom_point(data=reviews[reviews$listing_id %in% unique(listings$id),],aes(datex,factor(listing_id)), alpha=1,size=0.0001) +
-  labs(title = "Reviews per date and listing. Donostia 2011-2017 (abril)",
+  labs(title = "Reviews per date and listing. Barcelona 2011-2017 (abril)",
        subtitle = "Every line is one listing. Look at the line gaps: listings without reviews.",
        x = "Review date",
        y = "listing id",
@@ -396,8 +454,8 @@ ggplot() +
 
 # ------ Number of reviews per month. Histogram. Full period --------
 # ggplot(reviews[ reviews$year==2015,], aes(datex, ..count..)) +
-png(filename="images/airbnb/reviews/airbnb-barcelona-reviews-mes-2010-2018_all-data.png",width = 900,height = 600)
-ggplot(reviews, aes(datex, ..count..)) +
+png(filename="images/airbnb/reviews/airbnb-barcelona-reviews-mes-2010-201812_all-data.png",width = 900,height = 350)
+ggplot(filter(reviews,date < as.Date("2019-01-01")), aes(datex, ..count..)) +
   theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
   theme(
     panel.grid.major.x = element_blank(),
@@ -410,16 +468,17 @@ ggplot(reviews, aes(datex, ..count..)) +
   geom_histogram(binwidth = 30.41, colour="white") + #  bins = 72
   labs(title = "Reviews de Airbnb por mes en Barcelona",
        subtitle = "2010-2018",
-       x = "Año",
+       x = "",
        y = "Número de reviews por mes",
        caption = "Efecto Airbnb. lab.montera34.com. Datos: InsideAirbnb desde 2015 (27 series de datos)") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE)) 
 dev.off()
 
 # ted
-png(filename="images/airbnb/reviews/airbnb-barcelona-reviews-mes-2010-20180911_faceted_all-data.png",width = 900,height = 600)
-ggplot(reviews, aes(month)) +
-  theme_minimal(base_family = "Roboto Condensed", base_size = 10) +
+png(filename="images/airbnb/reviews/airbnb-barcelona-reviews-mes-2010-201812_faceted_2015-2018.png",width = 700,height = 700)
+ggplot(filter(reviews,date > as.Date("2014-12-31") & date < as.Date("2019-01-01") ), aes(month)) +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
   theme(
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
@@ -434,6 +493,7 @@ ggplot(reviews, aes(month)) +
        x = "Año",
        y = "Número de reviews por mes",
        caption = "Efecto Airbnb. lab.montera34.com. Datos: 26 archivos de InsideAirbnb desde 2015") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
   facet_wrap(~ year)
 dev.off()
 
@@ -469,6 +529,287 @@ ggplot(reviews[!reviews$year==2010 & !reviews$year==2011 & !reviews$year==2018,]
 
 
 
+
+# ------ Number of listings reviewd per month/year. Histogram. Full period --------
+png(filename="images/airbnb/reviews/airbnb-listings-insideairbnb-barcelona-with-review-month-2011-2018-line.png",width = 900,height = 350)
+ggplot(results, aes(date, listings)) +
+  # geom_col() +
+  geom_line() +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.ticks.x= element_line(size = 0.1)
+    # panel.grid.minor.y = element_blank()
+    # panel.grid.major.y = element_blank(),
+    # axis.text.y=element_blank()
+  ) +
+  labs(title = "Listings con reviews de Airbnb por mes en Barcelona",
+       subtitle = "2011-2018",
+       x = "Fecha",
+       y = "Número de listing con review por mes",
+       caption = "Efecto Airbnb. lab.montera34.com Data: InsideAirbnb 2017 y 2018") +
+  # scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+    scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = c(as.Date("2011-01-01"),as.Date("2018-12-31")))+
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE)) 
+
+dev.off()
+
+
+library(lubridate) #to extract month in following plot
+png(filename="images/airbnb/reviews/airbnb-listings-insideairbnb-barcelona-with-review-mes-2011-2018_agosto-marcado.png",width = 900,height = 350)
+ggplot(results, aes(date, listings, fill = month(date) == 8 )) +
+  geom_col() +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.ticks.x= element_line(size = 0.1),
+    legend.position = "bottom"
+    # panel.grid.minor.y = element_blank()
+    # panel.grid.major.y = element_blank(),
+    # axis.text.y=element_blank()
+  ) +
+  labs(title = "Anuncios con reviews de Airbnb por mes en Barcelona",
+       subtitle = "2011-2018 (septiembre)",
+       x = "Fecha",                 
+       y = "Número de anuncios con review por mes",
+       caption = "Efecto Airbnb. lab.montera34.com Data: InsideAirbnb 2017-2018") +
+  guides(fill=guide_legend(title="Agosto")) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+dev.off()
+
+# -------------- Room type classification
+# Convert data to long-form with 'melt' from the reshape2 package.
+results_melt <- melt(results, id.vars=c("date"),
+                     measure.vars=c("entire_home", "private_room","shared_room"))
+
+levels(results_melt$variable) <- c("Piso completo","Habitación","Habitación compartida")
+
+# Remove dates without data
+results_melt <- results_melt[results_melt$date < "2019-04-01" , ]
+
+# Plots -----------------
+png(filename="images/airbnb/reviews/airbnb-listings-insideairbnb-barcelona-with-review-mes-2011-2018_room-type_bar.png",width = 900,height = 350)
+ggplot(filter(results_melt,date < as.Date("2019-01-1")), aes(x=date, y=value, fill=variable)) +
+  geom_bar(position="stack", stat="identity")  + #use position "fill" to create stacker 100% height 
+  theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.ticks.x= element_line(size = 0.1)
+    # panel.grid.minor.y = element_blank()
+    # panel.grid.major.y = element_blank(),
+    # axis.text.y=element_blank()
+  ) +
+  labs(title = "Anuncios con reviews de Airbnb por mes en Barcelona",
+       subtitle = "2011-2018",
+       x = "",
+       y = "Número de anuncios",
+       caption = "Efecto Airbnb. lab.montera34.com Data: InsideAirbnb 2015-2018") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE)) 
+# scale_y_continuous(labels = percent_format())
+dev.off()
+
+png(filename="images/airbnb/reviews/airbnb-listings-insideairbnb-barcelona-with-review-mes-2011-2018_rooom-type_bar_facet.png",width = 900,height = 350)
+ggplot(filter(results_melt,date < as.Date("2019-01-1")), aes(x=date, y=value, fill=variable)) +
+  geom_bar(position="stack", stat="identity")  + #use position "fill" to create stacker 100% height 
+  theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.ticks.x= element_line(size = 0.1),
+    legend.position = "none"
+    # panel.grid.minor.y = element_blank()
+    # panel.grid.major.y = element_blank(),
+    # axis.text.y=element_blank()
+  ) +
+  labs(title = "Anuncios con reviews de Airbnb por mes en Barcelona",
+       subtitle = "2011-2018",
+       x = "Fecha",
+       y = "Número de anuncios",
+       caption = "Efecto Airbnb. lab.montera34.com Data: InsideAirbnb 2015-2018") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
+  facet_wrap(~variable)
+dev.off()
+
+png(filename="images/airbnb/reviews/airbnb-listings-insideairbnb-barcelona-with-review-mes-2011-2018_rooom-type_line.png",width = 900,height = 350)
+ggplot(filter(results_melt,date < as.Date("2019-01-1")), aes(x=date, y=value, color=variable)) +
+  geom_line()  +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.ticks.x= element_line(size = 0.1),
+    legend.position = "top"
+    # panel.grid.minor.y = element_blank()
+    # panel.grid.major.y = element_blank(),
+    # axis.text.y=element_blank()
+  ) +
+  labs(title = "Anuncios con reviews de Airbnb por mes en Barcelona",
+       subtitle = "2011-2018",
+       x = "Fecha",
+       y = "Número de anuncios",
+       caption = "Efecto Airbnb. lab.montera34.com Data: InsideAirbnb 2015-2018",
+       color="Tipo alojamiento") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = c(as.Date("2011-01-01"),as.Date("2018-12-31"))) +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE)) 
+#  scale_x_continuous(limits = c(as.Date("2011-01-01"),as.Date("2018-08-31"))) 
+dev.off()
+
+# Active listings. Calculate active listings if 30% of users leave review ----------
+results_melt$value_calculated_max <- round(results_melt$value / 0.3, 0)
+results_melt$value_calculated_min <- round(results_melt$value / 0.7, 0)
+
+png(filename="images/airbnb/reviews/airbnb-listings-insideairbnb-barcelona-with-review-mes-2011-2018_rooom-type_line_calculated.png",width = 900,height = 590)
+ggplot(filter(results_melt,date < "2019-01-01"),aes(x=date, color=variable)) +
+  geom_line(aes(y=value))  +
+  geom_line(aes(y=value_calculated_max),linetype = 2  )  +
+  
+  theme_minimal(base_family = "Roboto Condensed", base_size = 19) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.ticks.x= element_line(size = 0.1),
+    legend.position = "top"
+    # panel.grid.minor.y = element_blank()
+    # panel.grid.major.y = element_blank(),
+    # axis.text.y=element_blank()
+  ) +
+  labs(title = "Listings con reviews de Airbnb por mes en Barcelona",
+       subtitle = "2011-2018. Línea de puntos: cálculo de listings si 30% dejan reviews.",
+       x = "",
+       y = "Número de anuncios",
+       caption = "Efecto Airbnb. lab.montera34.com Data: InsideAirbnb 2015-2018",
+       color="Tipo alojamiento") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = c(as.Date("2011-01-01"),as.Date("2018-12-31")))+
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE)) 
+dev.off()
+
+# Compare with AIRDNA active listings data for Barcelona-----
+# airdna$date <- as.Date(airdna$date)
+# names(airdna) <- c("date","entire_home_airdna","private_room_airdna","shared_room_airdna","total_airdna")
+# results_airdna <- merge(results,airdna, by.x="date",by.y = "date",all = TRUE)
+
+# Convert data to long-form with 'melt' from the reshape2 package.
+# results_airdna_melt <- melt(results_airdna, id.vars=c("date"),
+#                      measure.vars=c("entire_home", "private_room","shared_room",
+#                                     "entire_home_airdna", "private_room_airdna","shared_room_airdna"))
+
+# airdna_melt <- melt(airdna, id.vars=c("date"),
+                    # measure.vars=c("entire_home_airdna", "private_room_airdna","shared_room_airdna"))
+
+
+# names(airdna_melt) <- c("date","variable","value_airdna")
+# resuls_melt <- merge(results_melt,airdna_melt, by.x="date",by.y = "date",all = TRUE)
+# reviews <- merge(reviews,listings[,c("id","room_type","city")], by.x = "listing_id", by.y = "id", all.x=TRUE)
+
+# results_airdna_melt$value_calculated <- round(results_airdna_melt$value / 0.3, 0)
+# Remove NA
+# results_melt <- results_melt[complete.cases(results_melt),]
+
+# Gr'afico resumen --------------------
+value_max <- 0.3
+value_min <- 0.7
+
+# dates.count.room_type viene de eliminados.R
+listings.found <- dates.count.room_type
+names(listings.found) <- c("date","variable","value")
+
+# fake dataframe to use in annotate
+df <- data.frame(x1 = 2.62, x2 = 3.57, y1 = 21.0, y2 = 15.0)
+
+levels(results_melt$variable) <- c("Piso completo","Habitación","Habitación compartida")
+levels(sources_melt$variable) <- c("Piso completo","Habitación","Habitación compartida")
+
+# # annotate ony one panel https://stackoverflow.com/questions/11889625/annotating-text-on-individual-facet-in-ggplot2
+# ann_text <- data.frame(mpg = 15,wt = 5,lab = "Text",
+#                        cyl = factor(8,levels = c("4","6","8")))
+# p + geom_text(data = ann_text,label = "Text")
+
+
+png(filename="images/airbnb/reviews/airbnb-listings-barcelona-with-review-by-room-type_found-in-inside-airbnb.png",
+    width = 1200,height = 600)
+ggplot(NULL,aes(x=date)) +
+  # InsideAirbnb reviews based counting of active listigns
+  # geom_line(data = filter(results_melt,variable == "entire_home"),aes(y=value))  + 
+  # probabilidad entre min y max
+  geom_ribbon(data = filter(results_melt,date < "2019-03-01",variable == "Piso completo"),
+              aes(ymin=value/value_min,ymax=value/value_max), fill="pink",alpha=0.5)  + 
+  geom_line(data=filter(results_melt,date < "2019-03-01",!variable == "Habitación compartida"),
+            aes(x=date, y=value/value_min, color=variable),alpha=0.4,size=1)  + 
+  
+  geom_ribbon(data = filter(results_melt,date < "2019-03-01",variable == "Habitación"),
+              aes(ymin=value/value_min,ymax=value/value_max), fill="green",alpha=0.3)  + 
+  geom_line(data=filter(results_melt,date < "2019-03-01",!variable == "Habitación compartida"),
+            aes(x=date, y=value/value_max, color=variable),alpha=0.4,size=1)  +
+  # number of listings found in reviews each month
+  geom_line(data=filter(results_melt,date < "2019-03-01",!variable == "Habitación compartida"),
+            aes(x=date, y=value, color=variable))  + 
+  geom_line(data=filter(listings.found,date < "2019-04-01",!variable == "Habitación compartida"), 
+            aes(x=date, y=value, color=variable))  + 
+  # number of listings found in each scraping 
+  geom_point(data=filter(listings.found,date < "2019-04-01",!variable == "Habitación compartida"),
+  aes(x=date, y=value, color=variable))  + 
+  annotate("text",x = as.Date("2016-05-1"),y = 18000, label="área: cáculo de anuncios según reviews",color="#000000",size=4,hjust = 1) + 
+  geom_curve(aes(x = as.Date("2016-05-19"), y = 18000, xend = as.Date("2016-08-6"), yend = 16000), 
+             color="#333333", data =df,  curvature = -0.2, arrow = arrow(length = unit(0.02, "npc"))   ) + 
+  
+  annotate("text",x = as.Date("2016-12-1"),y = 10000, label="anuncios encontrados online (en cada scraping)",color="#000000",size=4,hjust = 1) +
+  geom_curve(aes(x = as.Date("2016-12-19"), y = 10000, xend = as.Date("2017-05-6"), yend = 9300), 
+             color="#333333", data =df,  curvature = -0.2, arrow = arrow(length = unit(0.02, "npc"))   ) + 
+  
+  annotate("text",x = as.Date("2018-07-1"),y = 2000, label="anuncios que tuvieron review ese mes",color="#000000",size=4,hjust = 1) +
+  geom_curve(aes(x = as.Date("2018-07-19"), y = 2000, xend = as.Date("2018-10-6"), yend = 4000), 
+             color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.02, "npc"))   ) + 
+  
+  
+  # annotate("text",x = as.Date("2014-07-1"),y = 7500, label="30%",color="#000000",size=2,hjust = 1) +
+  # annotate("text",x = as.Date("2014-07-1"),y = 4000, label="70%",color="#000000",size=42,hjust = 1) +
+  
+  # geom_line(data = filter(results_melt,date < "2018-12-01"),aes(y=value_calculatede_min),linetype=2)  +
+  # AirDNA active listings
+  # geom_line(data = airdna_melt,aes(y=value, color=variable), size=1.5  )  +
+  # Number of listings in existing sources
+  geom_point(data =  filter(sources_melt, !variable == "Habitación compartida"),aes(y=value,color=variable), size=2 ) +
+  geom_text(data = filter(sources_melt, !variable == "Habitación compartida"),
+            aes(y=value,label=source,x=date-150),
+            size=3.5,hjust = -0.1, nudge_x = 0.05, check_overlap = TRUE, hjust = 1) + 
+  # scale_linetype_manual("",values=c(1, 2, 3,2, 2, 2),guide=FALSE)+
+  # scale_color_manual("",values = c("#F8766D","#F8766D","#44BB55","#44BB55","#AAAADD","#AAAADD","#AAAA55")) +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 20) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.ticks.x= element_line(size = 0.1),
+    panel.grid.minor.y = element_blank(),
+    legend.position = "none"
+    # panel.grid.major.y = element_blank(),
+    # axis.text.y=element_blank()
+  ) +
+  labs(title = "Anuncios con reviews de Airbnb por mes vs Anuncios publicados. Barcelona",
+       subtitle = "2014-2019 (marzo). Área: cálculo entre 30%-70% evaluaciones basado en reviews (fuente InsideAirbnb).",
+       x = "",
+       y = "Número de anuncios",
+       caption = "Efecto Airbnb. lab.montera34.com Data: InsideAirbnb.",
+       color = "Anuncios con reviews") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = c(as.Date("2014-01-01"),as.Date("2019-03-31"))) +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
+  facet_wrap(~variable)
+dev.off()
+
+
+ggplot(NULL,aes(x=date)) +
+  geom_line(data=filter(results_melt,date < "2019-01-01",!variable == "Habitación compartida"),
+            aes(x=date, y=value, color=variable))  +
+  geom_line(data=filter(listings.found,date < "2019-01-01",!variable == "Habitación compartida"), 
+            aes(x=date, y=value, color=variable))  +
+  facet_wrap(~variable)
+
+
+
 # ------ Acumulation of reviews: date vs listing_id. Full period analyzed ------
 ggplot() +
   theme_minimal(base_family = "Roboto", base_size = 10) +
@@ -479,7 +820,7 @@ ggplot() +
     axis.text.y=element_blank()
   ) +
   geom_point(data=reviews[reviews$listing_id %in% unique(listings$id),],aes(datex,factor(listing_id)), alpha=1,size=0.0001) +
-  labs(title = "Reviews per date and listing. Donostia 2011-2017 (abril)",
+  labs(title = "Reviews per date and listing. Barcelona 2011-2017 (abril)",
        subtitle = "Every line is one listing. Look at the line gaps: listings without reviews.",
        x = "Review date",
        y = "listing id",
@@ -541,7 +882,7 @@ ggplot() +
   ) +
   geom_point(data=reviews[reviews$listing_id %in% unique(listings$id) & reviews$datex > "2016-04-01",],aes(datex,factor(listing_id)), alpha=0.3,size=0.0001) +
   # geom_point(data=reviews[reviews$listing_id %in% listings_top,],aes(datex,factor(listing_id)), alpha=1,size=0.005,color="#FF0000") +
-  labs(title = "Reviews per date and listing. Donostia 2011-2017 (abril)",
+  labs(title = "Reviews per date and listing. Barcelona 2011-2017 (abril)",
        subtitle = "Every line is one listing. In red: the top 4 hosts (users with more listings) manage 155 ads.",
        x = "Review date",
        y = "listing id",
