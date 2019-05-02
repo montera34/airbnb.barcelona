@@ -16,9 +16,12 @@ dates <- c("150430","150717","150904","151002","160103","161107","161208","17010
            "170605","170706","170806","170912","171007","171113","171209","180117","180207","180412","180514","180609",
            "180710","180818","181010","181107","181210","190114","190206","190308")
 
+# reverse dates to get the most recent data in the loop
+dates <- rev(dates)
+
 # Load data ------------------------------------------------------------------------
-# loop starts
-listings  <- select(as.data.frame(read.delim("data/original/airbnb/150430/listings_summary_barcelona_insideairbnb.csv",sep = ",")),
+# loop starts loading the first set of listings
+listings  <- select(as.data.frame(read.delim("data/original/airbnb/190308/listings_summary_barcelona_insideairbnb.csv",sep = ",")),
                     id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
 
 listings.total <- listings
@@ -36,15 +39,17 @@ for (i in 1:length(dates)) {
                 id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
   # names(neo) <- "id"
   print(paste("neo a leer",nrow(neo)))
-  # TODO. Solamente inserta los que no estaban ya. Si el calculated_host_listings_count ha camiado (el usuario ahora tiene más anuncios) no lo actualizaría
+  # TODO. Solamente inserta los que no estaban ya. Si el calculated_host_listings_count ha cambiado (el usuario tuvo menos o más anuncios) no lo actualizaría
   # Se podría guardar el host_id y luego mirar si ha tenido más de una anuncio en algún momento
   neo2 <- select(as.data.frame(neo[!neo$id %in% listings.total$id,]),
                  id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
+  neo_reviews <- select(as.data.frame(neo[neo$id %in% listings.total$id,]),
+                        id,number_of_reviews)
   # names(neo2) <- "id"
   print(paste("neo2 a insertar",nrow(neo2)))
   # añade los anuncios al listado original
   listings.total <- rbind(listings.total,neo2)
-}
+  }
 
 # counts whether a listing exists in a scraping
 # each row is one listings. each column is one date when scraping was made by insideairbnb
@@ -58,12 +63,15 @@ for (i in 1:length(dates)) {
   # sets to 0 for all
   listings.total[,paste("d",dates[i],sep="")] <- 0
   # sets to 1 if listing is in that date
-  listings.total[listings.total$id %in% neo$id,paste("d",dates[i],sep="")] <- 1
+  listings.total[ listings.total$id %in% neo$id, paste("d",dates[i],sep="") ] <- 1
 }
 remove("neo","neo2")
 
 # Translate room type values
 levels(listings.total$room_type) <- c("Piso completo","Habitación","Habitación compartida")
+
+# createss to long format ------------------------------------------------------------------------------
+
 
 # converts to long format ------------------------------------------------------------------------------
 data_long <- listings.total %>% gather(fecha, exists, 8:39) #starts in 5th column after other variables
@@ -150,7 +158,7 @@ dev.off()
 # filter by number of reviews ---------------------------------
 dates.count.active <- data_long %>% filter (exists ==1) %>% group_by(fechab,reviews.type) %>% summarise(anuncios=n())
 
-png(filename=paste("images/airbnb/eliminados/anuncios-barcelona-reviews-por-mes-linea-multi.png", sep = ""),width = 1000,height = 400)
+png(filename=paste("images/airbnb/eliminados/anuncios-barcelona-reviews-por-mes-linea-compara.png", sep = ""),width = 1000,height = 400)
 ggplot(NULL) + 
   geom_line(data=dates.count.active %>% filter(reviews.type=="1 o más reviews"),
             aes(fechab,anuncios,color=reviews.type),size=1.5) +
@@ -188,7 +196,7 @@ ggplot(NULL) +
   geom_line(data=filter(dates.count.reviews.availablity, !reviews.type ==""),
             aes(fechab,anuncios,color=availability.type),size=1.5) +
   scale_color_brewer(palette="PuBu") +
-  scale_y_continuous(limits=c(0, max(dates.count$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
+  scale_y_continuous(limits=c(0, max(dates.count.reviews.availablity$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
   annotate("text",x=as.Date("2018-05-28"),y=4000,label="acuerdo",color="#000000",size=5,hjust=1) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
   theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
@@ -255,7 +263,7 @@ dates.count.barrio.room %>% filter(!room_type=="Habitación compartida") %>%
   geom_line(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=0.6) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
   # barrios labels
-  geom_text_repel(data=filter(dates.count.barrio,fechab==as.Date("2019-03-08"),anuncios>400), 
+  geom_text_repel(data=filter(dates.count.barrio.room,fechab==as.Date("2019-03-08"),anuncios>250), 
                   aes(fechab+5,anuncios,label=paste(anuncios,neighbourhood)),
                   size=4,
                   hjust=0,
@@ -283,7 +291,7 @@ dev.off()
 dates.count.barrio.room.reviews <- data_long %>% filter (exists ==1) %>% group_by(fechab,neighbourhood,room_type,reviews.type) %>% 
   summarise(anuncios=n()) %>% filter(!reviews.type=="")
 
-png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio-room-reviews.png", sep = ""),width = 1200,height = 1100)
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio-room-reviews_inv.png", sep = ""),width = 1200,height = 1100)
 
 dates.count.barrio.room.reviews %>% filter(!room_type=="Habitación compartida") %>%
   ggplot () +
