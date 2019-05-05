@@ -14,16 +14,23 @@ library(ggrepel) # for geom_text_repel to prevent overlapping
 # Loads dates with listings data
 dates <- c("150430","150717","150904","151002","160103","161107","161208","170104","170209","170306","170408","170507",
            "170605","170706","170806","170912","171007","171113","171209","180117","180207","180412","180514","180609",
-           "180710","180818","181010","181107","181210","190114","190206","190308")
+           "180710","180814","180911","181010","181107","181210","190114","190206","190308")
 
 # reverse dates to get the most recent data in the loop
 dates <- rev(dates)
+dates[26]
 
 # Load data ------------------------------------------------------------------------
 
 # loop starts loading the first set of listings
-listings  <- select(as.data.frame(read.delim("data/original/airbnb/190308/listings_summary_barcelona_insideairbnb.csv",sep = ",")),
+# basic listings
+# listings  <- select(as.data.frame(read.delim("data/original/airbnb/190308/listings_summary_barcelona_insideairbnb.csv",sep = ",")),
+#                     id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
+# full data listings
+# listings  <- read.delim("data/original/airbnb/190308/data/listings.csv.gz",sep = ",")
+listings  <- select(as.data.frame(read.delim("data/original/airbnb/190308/data/listings.csv.gz",sep = ",")),
                     id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
+
 
 listings.total <- listings
 
@@ -78,8 +85,13 @@ todos <- ""
 # loop to insert every listing in every scraping in a row and add its scraping date
 for (i in 1:length(dates)) {
   print(i)
-  neo <- select(as.data.frame(read.delim(paste("data/original/airbnb/",dates[i],"/listings_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")),
-                id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
+  print(dates[i])
+  # basic data
+  # neo <- select(as.data.frame(read.delim(paste("data/original/airbnb/",dates[i],"/listings_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")),
+  #               id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
+  # full data
+  neo <- select(as.data.frame(read.delim(paste("data/original/airbnb/",dates[i],"/data/listings.csv.gz",sep=""),sep = ",")),
+                id,license,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_cleansed,neighbourhood_group_cleansed,number_of_reviews,availability_365)
   neo$date <- paste(dates[i],sep="")
   todos <- rbind(todos,neo)
 }
@@ -95,7 +107,7 @@ todos$calculated_host_listings_count <- as.integer(todos$calculated_host_listing
 todos$number_of_reviews <- as.integer(todos$number_of_reviews)
 todos$availability_365 <- as.integer(todos$availability_365)
 
-# saves the file in data_long dataframe, which was the previoues way of doing this
+# saves the file in data_long dataframe, which was the previous way of doing this
 data_long <- todos
 # data_long$fechab <- strapplyc( as.character(data_long$date), "([0-9]*)", simplify = TRUE)
 data_long$fechab <- as.Date( paste(20,as.character(data_long$date),sep=""), "%Y%m%d")
@@ -107,6 +119,11 @@ data_long2 <- listings.total %>% gather(fecha, exists, 8:39) #starts in 8th colu
 # parse date: extract date from variable and parse it. Adds "20" to have full year.
 data_long2$fechab <- strapplyc( as.character(data_long2$fecha), "d([0-9]*)", simplify = TRUE)
 data_long2$fechab <- as.Date( paste(20,as.character(data_long2$fechab),sep=""), "%Y%m%d")
+
+# has license
+data_long$has.license <- "sin licencia"
+data_long[data_long$license != "",]$has.license <- "con licencia"
+
 
 # classify by type of host ----------------------------------------------------------------------------
 data_long$host.type <- ""
@@ -251,10 +268,10 @@ dev.off()
 
 # counts listings por barrio --------------------------------------------------------------------
 # creates extended color palette https://www.r-bloggers.com/how-to-expand-color-palette-with-ggplot-and-rcolorbrewer/
-colourCount <- length(unique(data_long$neighbourhood))
+colourCount <- length(unique(data_long$neighbourhood_cleansed))
 getPalette <- colorRampPalette(brewer.pal(9, "Set2"))
 
-dates.count.barrio <- data_long %>% group_by(fechab,neighbourhood) %>% summarise(anuncios=n())
+dates.count.barrio <- data_long %>% group_by(fechab,neighbourhood_cleansed) %>% summarise(anuncios=n())
 # dates.count.barrio2 <- data_long2 %>% filter (exists ==1) %>% group_by(fechab,neighbourhood) %>% summarise(anuncios=n())
 
 png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio.png", sep = ""),width = 1000,height = 700)
@@ -264,14 +281,14 @@ dates.count.barrio %>%
   annotate("text",x=as.Date("2018-05-25"),y=5000,label="acuerdo",color="#000000",
            size=5,family = "Roboto Condensed",hjust=1) +
   # geom_point(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=1) +
-  geom_line(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=0.5) +
+  geom_line(aes(fechab,anuncios,group=neighbourhood_cleansed,color=neighbourhood_cleansed),size=0.5) +
   scale_color_manual(values = getPalette(colourCount)) +
-  annotate("text",x=as.Date("2018-05-28"),y=4000,label="acuerdo",color="#000000",size=5,hjust=1) +
+  # annotate("text",x=as.Date("2018-05-28"),y=4000,label="acuerdo",color="#000000",size=5,hjust=1) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
   # barrios labels
   geom_text_repel(data=filter(dates.count.barrio,fechab==as.Date("2019-03-08"),anuncios>200), 
             aes(
-              fechab+5,anuncios,label=paste(anuncios,neighbourhood)),
+              fechab+5,anuncios,label=paste(anuncios,neighbourhood_cleansed)),
               nudge_x = 35, # adjust the starting y position of the text label
               size=4,
               hjust=0,
@@ -303,9 +320,142 @@ dev.off()
 # write.csv(spread, file = "tmp/anucios-barrio-evol.csv", row.names = FALSE)
 # write.csv(eeee, file = "tmp/anucios-barrio-evol-long.csv", row.names = FALSE)
 
+# counts listings por barrio y license--------------------------------------------------------------
+dates.count.barrio.license <- data_long %>% group_by(fechab,neighbourhood_cleansed,has.license) %>% summarise(anuncios=n())
+
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio-license.png", sep = ""),width = 1300,height = 700)
+dates.count.barrio.license %>%
+  ggplot () +
+  annotate("text",x=as.Date("2018-05-25"),y=1300,label="acuerdo",color="#000000",
+           size=5,family = "Roboto Condensed",hjust=1) +
+  # geom_point(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=1) +
+  geom_line(aes(fechab,anuncios,group=neighbourhood_cleansed,color=neighbourhood_cleansed),size=0.6) +
+  scale_color_manual(values = getPalette(colourCount)) +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  # barrios labels
+  geom_text_repel(data=filter(dates.count.barrio.room,fechab==as.Date("2019-03-08"),anuncios>200), 
+                  aes(fechab+5,anuncios,label=paste(anuncios,neighbourhood_cleansed)),
+                  nudge_x = 35, # adjust the starting y position of the text label
+                  size=4,
+                  hjust=0,
+                  family = "Roboto Condensed",
+                  direction="y",
+                  segment.size = 0.2,
+                  segment.color="#333333",
+                  xlim  = c(as.Date(max(dates.count.barrio.room$fechab)),as.Date("2021-06-4"))
+  ) +
+  scale_y_continuous(limits=c(0, max(dates.count.barrio.room$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
+  scale_x_date(
+    date_breaks = "1 year",
+    limits = c(as.Date(min(dates.count.barrio.room$fechab)),as.Date("2021-01-4")),
+    date_labels = "%Y"
+  ) +
+  # xlim(as.Date(min(dates.count.barrio.room$fechab)),as.Date("2021-06-4")) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.ticks.x = element_line(color = "#000000"),
+    # panel.grid.minor.y = element_blank(),
+    legend.position = "none"
+  ) +
+  labs(title = "Número de anuncios de Airbnb por barrio y si tiene licencia en Barcelona",
+       subtitle = "2015 - marzo 2019 (publicados en cada scraping de InsideAirbnb)",
+       y = "número de anuncios",
+       x = "",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
+  facet_wrap(~has.license)
+dev.off()
+
+
+# counts listings por barrio y license y room type--------------------------------------------------------------
+dates.count.barrio.license.room <- data_long %>% group_by(fechab,neighbourhood_cleansed,room_type.s,has.license) %>% 
+  summarise(anuncios=n())
+
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio-license-room.png", sep = ""),width = 1100,height = 800)
+dates.count.barrio.license.room %>% 
+  ggplot () +
+  annotate("text",x=as.Date("2018-05-25"),y=950,label="acuerdo",color="#000000",
+           size=5,family = "Roboto Condensed",hjust=1) +
+  # geom_point(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=1) +
+  geom_line(aes(fechab,anuncios,group=neighbourhood_cleansed,color=neighbourhood_cleansed),size=0.6) +
+  scale_color_manual(values = getPalette(colourCount)) +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  # barrios labels
+  geom_text_repel(data=filter(dates.count.barrio.license.room,fechab==as.Date("2019-03-08"),anuncios>200), 
+                  aes(fechab+5,anuncios,label=paste(anuncios,neighbourhood_cleansed)),
+                  nudge_x = 35, # adjust the starting y position of the text label
+                  size=4,
+                  hjust=0,
+                  family = "Roboto Condensed",
+                  direction="y",
+                  segment.size = 0.2,
+                  segment.color="#333333",
+                  xlim  = c(as.Date(max(dates.count.barrio.room$fechab)),as.Date("2021-06-4"))
+  ) +
+  scale_y_continuous(limits=c(0, max(dates.count.barrio.license.room$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
+  xlim(as.Date(min(dates.count.barrio.license.room$fechab)),as.Date("2020-06-4")) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.ticks.x = element_line(color = "#555555"),
+    # panel.grid.minor.y = element_blank(),
+    legend.position = "none"
+  ) +
+  labs(title = "Número de anuncios de Airbnb por barrio, si tiene licencia y tipo de alojamiento en Barcelona",
+       subtitle = "2015-2018 (publicados en cada scraping de InsideAirbnb)",
+       y = "número de anuncios",
+       x = "",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
+  facet_wrap(room_type.s~has.license)
+dev.off()
+
+# counts listings por distrito y license y room type--------------------------------------------------------------
+dates.count.distrito.license.room <- data_long %>% group_by(fechab,neighbourhood_group_cleansed,room_type.s,has.license) %>% 
+  summarise(anuncios=n())
+
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio-license-room.png", sep = ""),width = 1100,height = 800)
+dates.count.distrito.license.room %>% 
+  ggplot () +
+  annotate("text",x=as.Date("2018-05-25"),y=950,label="acuerdo",color="#000000",
+           size=5,family = "Roboto Condensed",hjust=1) +
+  # geom_point(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=1) +
+  geom_line(aes(fechab,anuncios,group=neighbourhood_group_cleansed,color=neighbourhood_group_cleansed),size=0.6) +
+  scale_color_manual(values = getPalette(colourCount)) +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  # barrios labels
+  geom_text_repel(data=filter(dates.count.distrito.license.room,fechab==as.Date("2019-03-08"),anuncios>200), 
+                  aes(fechab+5,anuncios,label=paste(anuncios,neighbourhood_group_cleansed)),
+                  nudge_x = 35, # adjust the starting y position of the text label
+                  size=4,
+                  hjust=0,
+                  family = "Roboto Condensed",
+                  direction="y",
+                  segment.size = 0.2,
+                  segment.color="#333333",
+                  xlim  = c(as.Date(max(dates.count.barrio.room$fechab)),as.Date("2021-06-4"))
+  ) +
+  scale_y_continuous(limits=c(0, max(dates.count.distrito.license.room$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
+  xlim(as.Date(min(dates.count.barrio.license.room$fechab)),as.Date("2020-06-4")) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.ticks.x = element_line(color = "#555555"),
+    # panel.grid.minor.y = element_blank(),
+    legend.position = "none"
+  ) +
+  labs(title = "Número de anuncios de Airbnb por barrio, si tiene licencia y tipo de alojamiento en Barcelona",
+       subtitle = "2015-2018 (publicados en cada scraping de InsideAirbnb)",
+       y = "número de anuncios",
+       x = "",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
+  facet_wrap(room_type.s~has.license)
+dev.off()
 
 # counts listings por barrio y room type--------------------------------------------------------------
-dates.count.barrio.room <- data_long %>% group_by(fechab,neighbourhood,room_type.s) %>% summarise(anuncios=n())
+dates.count.barrio.room <- data_long %>% group_by(fechab,neighbourhood_cleansed,room_type.s) %>% summarise(anuncios=n())
 
 png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio-room.png", sep = ""),width = 1300,height = 700)
 dates.count.barrio.room %>% 
@@ -313,12 +463,12 @@ dates.count.barrio.room %>%
   annotate("text",x=as.Date("2018-05-25"),y=1300,label="acuerdo",color="#000000",
            size=5,family = "Roboto Condensed",hjust=1) +
   # geom_point(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=1) +
-  geom_line(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=0.6) +
+  geom_line(aes(fechab,anuncios,group=neighbourhood_cleansed,color=neighbourhood_cleansed),size=0.6) +
   scale_color_manual(values = getPalette(colourCount)) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
   # barrios labels
   geom_text_repel(data=filter(dates.count.barrio.room,fechab==as.Date("2019-03-08"),anuncios>200), 
-                  aes(fechab+5,anuncios,label=paste(anuncios,neighbourhood)),
+                  aes(fechab+5,anuncios,label=paste(anuncios,neighbourhood_cleansed)),
                   nudge_x = 35, # adjust the starting y position of the text label
                   size=4,
                   hjust=0,
@@ -352,7 +502,7 @@ dates.count.barrio.room %>%
 dev.off()
 
 # counts listings por barrio y room type y reviews--------------------------------------------------------------
-dates.count.barrio.room.reviews <- data_long %>% group_by(fechab,neighbourhood,room_type.s,reviews.type) %>% 
+dates.count.barrio.room.reviews <- data_long %>% group_by(fechab,neighbourhood_cleansed,room_type.s,reviews.type) %>% 
   summarise(anuncios=n()) %>% filter(!reviews.type=="")
 
 png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio-room-reviews.png", sep = ""),width = 1100,height = 800)
@@ -361,12 +511,12 @@ dates.count.barrio.room.reviews %>%
   annotate("text",x=as.Date("2018-05-25"),y=850,label="acuerdo",color="#000000",
            size=5,family = "Roboto Condensed",hjust=1) +
   # geom_point(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=1) +
-  geom_line(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=0.6) +
+  geom_line(aes(fechab,anuncios,group=neighbourhood_cleansed,color=neighbourhood_cleansed),size=0.6) +
   scale_color_manual(values = getPalette(colourCount)) +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
   # barrios labels
   geom_text_repel(data=filter(dates.count.barrio.room.reviews,fechab==as.Date("2019-03-08"),anuncios>200), 
-                  aes(fechab+5,anuncios,label=paste(anuncios,neighbourhood)),
+                  aes(fechab+5,anuncios,label=paste(anuncios,neighbourhood_cleansed)),
                   nudge_x = 35, # adjust the starting y position of the text label
                   size=4,
                   hjust=0,
