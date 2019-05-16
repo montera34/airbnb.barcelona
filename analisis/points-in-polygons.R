@@ -22,55 +22,58 @@ distritos <- readOGR("data/original/contornos/distritos_geo.json")
 
 # Use this for municipios
 # shape of municipalities from IGN
-municipios <- readOGR("data/original/contornos/recintos_municipales_inspire_peninbal_wgs84_export_provincia-barcelona_geo.json")
-barrios <- municipios
+# municipios <- readOGR("data/original/contornos/recintos_municipales_inspire_peninbal_wgs84_export_provincia-barcelona_geo.json")
+# barrios <- municipios
 
 # points
 # airbnb <- read.delim("data/original/airbnb/180619/barcelona_airbnb_datahippo.csv",sep = ",")
 # airbnb <- read.delim("data/original/airbnb/180619/barcelona_homeaw_datahippo.csv",sep = ",")
-airbnb <- read.delim("data/original/airbnb/180619/barcelona_provincia_airbnb_datahippo.csv",sep = ",")
+# airbnb <- read.delim("data/original/airbnb/180619/barcelona_provincia_airbnb_datahippo.csv",sep = ",")
 # airbnb <- read.delim("data/original/airbnb/180818/listings_summary_barcelona_insideairbnb.csv",sep = ",")
+airbnb <- read.delim("data/original/airbnb/190308/listings_summary_barcelona_insideairbnb.csv",sep = ",")
+
 
 # Prepares and counts ----
 
 ## Get long and lat from your data.frame. Make sure that the order is in lon/lat.
 # source: https://stackoverflow.com/questions/29736577/how-to-convert-data-frame-to-spatial-coordinates#29736844
 xy <- airbnb[,c("longitude","latitude")]
+# transform to correct CRS projection to WGS84
 airbnbSp <- SpatialPointsDataFrame(coords = xy, data = airbnb, proj4string = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
 # class(airbnbSp)
 # proj4string(airbnbSp)
 
-# serves to count points (people in Padrón) in polygon (barrios)
-# retrieve  the  geometry  indices  of Barrios at  the  locations  of A (people points).  
+# serves to count how many points (listings) are in polygons (barrios)
+# retrieve  the  geometry  indices  of Barrios at  the  locations  of A (listing points).  
 # More  in particular, an integer vector of length length(A) is returned, with NA values for locations in 
-# A not matching with locations in B (e.g.  those points outside a set of polygons).
+# A not matching with locations in B (e.g. those points outside a set of polygons).
 # (https://cran.r-project.org/web/packages/sp/vignettes/over.pdf) 
 countBarrios <- over(airbnbSp, barrios)
-# table(countBarrios$BAR_DS_O)
+# table(countBarrios$N_Barri)
 
 # same calc for distritos
 countdistritos <- over(airbnbSp, distritos)
-# table(countdistritos$Unidad_men)
+# table(countdistritos$N_Distri)
 
 # Adds calculated barrios to spatial poligon
 airbnbSp$barrio <- countBarrios$N_Barri
-airbnbSp$barrio <- countBarrios$NAMEUNIT # para municipios
+# airbnbSp$barrio <- countBarrios$NAMEUNIT # para municipios
 airbnbSp$distrito <- countdistritos$N_Distri
 
-# Maps: Where are those points without barrio ----
-library(ggmap)
-# Quedan fuera todos los anuncios que corrresponden a barcos del puerto olímpico!!!
-qmplot(longitude, latitude, data = airbnb[is.na(airbnbSp$barrio =="no location"),], maptype = "toner-lite", 
-       color = I("red"),alpha = I(.2)) + labs(title= "Points without barrio" )
-# cuántos sin barrio?
-nrow(airbnb[is.na(airbnbSp$barrio =="no location"),])
-# plot todos los anuncios en mapa
-qmplot(longitude, latitude, data = airbnb, maptype = "toner-lite", 
-       color = I("red"),alpha = I(.2)) + labs(title= "Points with barrio" )
+# # Maps: Where are those points without barrio ----
+# library(ggmap)
+# # Quedan fuera todos los anuncios que corrresponden a barcos del puerto olímpico!!!
+# qmplot(longitude, latitude, data = airbnb[is.na(airbnbSp$barrio =="no location"),], maptype = "toner-lite", 
+#        color = I("red"),alpha = I(.2)) + labs(title= "Points without barrio" )
+# # cuántos sin barrio?
+# nrow(airbnb[is.na(airbnbSp$barrio =="no location"),])
+# # plot todos los anuncios en mapa
+# qmplot(longitude, latitude, data = airbnb, maptype = "toner-lite", 
+#        color = I("red"),alpha = I(.2)) + labs(title= "Points with barrio" )
 
 # Continues transformation ----
-
-airbnb <- as.data.frame(airbnbSp) # convert spatial data to regular data frame
+# convert spatial data to regular data frame
+airbnb <- as.data.frame(airbnbSp)
 
 # removes duplicated columns with lat and long
 drops <- c("latitude.1","longitude.1") 
@@ -94,8 +97,11 @@ length(airbnb[is.na(airbnbSp$barrio),]$name)
 
 # Para municipios ----
 # Cambia nombre de variable "Barrio" por "Municipio"
-names(airbnb)[14] <- "municipio"
+# names(airbnb)[14] <- "municipio"
 
 # saves file -----
 # save(airbnb,file="data/output/180423_listings-airbnb-donostia_datahippo_barrio-umenor.Rda")
-write.csv(airbnb, file = "data/output/airbnb/180619_listings-airbnb-provincia-barcelona_datahippo_municipio.csv", row.names = FALSE)
+write.csv(airbnb, file = "data/output/airbnb/190308/listings-airbnb-provincia-barcelona_insideairbnb_barrio-distrito.csv", row.names = FALSE)
+test <- airbnb[,c("neighbourhood","neighbourhood_group","barrio","distrito")]
+table(airbnb$neighbourhood_group)
+table(airbnb$distrito)
