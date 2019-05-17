@@ -851,17 +851,17 @@ por_distritos.plazas <- left_join(por_distritos.plazas, select(airbnb.distritos.
 por_distritos.plazas <- por_distritos.plazas %>% filter( !is.na(habitantes) )
 
 # añade datos de vivienda
-por_distritos.plazas <- full_join(por_distritos.plazas,select(por_distritos,-distrito,-count), by="coddistrit")
+# por_distritos.plazas <- full_join(por_distritos.plazas,select(por_distritos,-distrito,-count), by="coddistrit")
 
-por_distritos.plazas$ratio2019_plazasxhab <- round(por_distritos.plazas$plazas/ por_distritos.plazas$poblacion *100,digits = 2)
-por_distritos.plazas$ratio2019_airbnbxviv <- round(por_distritos.plazas$anuncios/ por_distritos.plazas$Total *100,digits = 2)
-por_distritos.plazas$ratio2019_airbnbvivxviv <- round(por_distritos.plazas$viviendas_completas/ por_distritos.plazas$Total *100,digits = 2)
+por_distritos.plazas$ratio2019_plazasxhab <- round(por_distritos.plazas$plazas/ por_distritos.plazas$habitantes *100,digits = 2)
+por_distritos.plazas$ratio2019_airbnbxviv <- round(por_distritos.plazas$anuncios/ por_distritos.plazas$viviendas *100,digits = 2)
+por_distritos.plazas$ratio2019_airbnbvivxviv <- round(por_distritos.plazas$viviendas_completas/ por_distritos.plazas$viviendas *100,digits = 2)
 
 # convierte a formato largo
 dist.plazas_long <- por_distritos.plazas %>% select(distrito,ratio2019_plazasxhab,ratio2019_airbnbxviv,ratio2019_airbnbvivxviv) %>%
   gather("tipo","ratio",-distrito)
 
-write.csv(por_distritos.plazas %>% select(distrito,ratio2019_plazasxhab,ratio2019_airbnbxviv,ratio2019_airbnbvivxviv,anuncios), file = "data/output/airbnb/190227/ratios_airbnb-barcelona-distritos-201903.csv", row.names = FALSE)
+write.csv(por_distritos.plazas %>% select(distrito,ratio2019_plazasxhab,ratio2019_airbnbxviv,ratio2019_airbnbvivxviv,anuncios), file = "data/output/airbnb/190308/ratios_airbnb-barcelona-distritos-201903.csv", row.names = FALSE)
 
 # simples gráficos de barras de ratios ---------------------
 ggplot(por_distritos.plazas) + 
@@ -880,9 +880,9 @@ ggplot(por_distritos.plazas) +
   coord_flip()
 
 # barras ratios comparativas ----------
-png(filename="images/airbnb/ratio-listings-airbnb-anuncios-distritos-barcelona-201903.png",width = 600,height = 600)
-por_distritos.plazas %>% 
-  ggplot(aes(y=ratio2019_hab,x=reorder(distrito,ratio2019_hab))) + #order by Value or by -pos_ratio2019
+png(filename="images/airbnb/ratio-listings-airbnb-anuncios-distritos-barcelona-201903.png",width = 600,height = 500)
+por_distritos.plazas %>% filter (!is.na(ratio2019_plazasxhab) ) %>%
+  ggplot(aes(y=ratio2019_plazasxhab,x=reorder(distrito,ratio2019_plazasxhab))) + #order by Value or by -pos_ratio2019
   geom_col(position = "dodge") +
   # scale_y_continuous(limits = c(0,8.5), expand = c(0,0)) +
   theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
@@ -895,15 +895,16 @@ por_distritos.plazas %>%
        y = "ratio anuncios Airbnb / 100 viviendas",
        x = NULL,
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
-  geom_text(aes(label =ratio2019_hab),
+  geom_text(aes(label =ratio2019_plazasxhab),
             position = position_dodge(width = 1), hjust = -0.1,
-            size=3,color="#777777") +
+            size=4,color="#777777",family = "Roboto Condensed") +
   coord_flip()
 dev.off()
 
 # barras de los tres ratios ------------------
 png(filename="images/airbnb/ratios-airbnb-distritos-barcelona-201903_b.png",width = 900,height = 450)
-ggplot(dist.plazas_long) + 
+dist.plazas_long %>% filter (!is.na(ratio) ) %>%
+ggplot() + 
   geom_col(
     aes(x=reorder(distrito,ratio),y=ratio,fill=tipo,position="fill")
   ) +
