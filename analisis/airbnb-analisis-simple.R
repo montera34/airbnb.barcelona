@@ -33,15 +33,26 @@ distritos <- readOGR("data/original/contornos/distritos_geo.json")
 # mar <- readOGR("data/original/shapes/mar-donostia.geojson") TODO
 municipios <- readOGR("data/original/contornos/recintos_municipales_inspire_peninbal_wgs84_export_provincia-barcelona_geo.json")
 
+# loads viviendas and habitantes por barrio
 viviendas_barrios <- read.delim("data/original/demografia-vivienda/habitantes-viviendas-por-barrios_padron2018_ayto-barcelona.csv",sep = ",")
-# viviendas_distritos <- read.delim("data/original/numero-viviendas-por-distrito-valencia-censo2011-ine.csv",sep = ",")
-# habitantes_distritos <- read.delim("data/original/poblacion-por-distrito-valencia-censo2011-ine.csv",sep = ",")
+# transform it to have data by distritos
+viviendas_distritos <- viviendas_barrios %>% 
+  group_by(Nom_Districte) %>%
+  summarise(
+    habitantes=sum(Població),
+    viviendas=sum(Domicilis)
+    ) %>% 
+  ungroup() %>%
+  arrange(-habitantes)
+
 
 # Airbnb listings 2019-03-08
 # Original InsideAirbnb file
 # airbnbsource <- read.delim("data/original/airbnb/190308/listings_summary_barcelona_insideairbnb.csv",sep = ",")
 # You need a properly processed file with points-in-polygons.R script. Inside AIrbnb counts point by vecinity, it seems
 airbnbsource <- read.delim("data/output/airbnb/190308/listings-airbnb-provincia-barcelona_insideairbnb_barrio-distrito.csv",sep = ",")
+airbnbsource_total <- read.delim("data/original/airbnb/190308/data/listings.csv.gz",sep = ",") %>% select(id,accommodates)
+airbnbsource <- left_join(airbnbsource,airbnbsource_total,by = "id")
 
 # Translate room type
 levels(airbnbsource$room_type) <- c("Vivienda completa","Habitación privada","Habitación compartida")
@@ -551,41 +562,24 @@ library(gpclib)
 library(maptools)
 
 # load fresh data
-# barrios <-   readOGR("data/original/shapes/barrios.valencia.wgs84.geojson") #TODO
-
-# prepare and prepare data -----------------
-# adds 0 to coddistbat to allow join
-# por_barrios$coddistbar <- as.character(por_barrios$coddistbar)
-# add leading 0 to barrios with only two cifras in coddistbar
-# por_barrios <- por_barrios %>% mutate(
-#   coddistbar = ifelse( nchar(coddistbar) == 2, 
-#                        paste0("0",coddistbar),
-#                        coddistbar
-#   )
-# )
-
-# por_barrios.viviendas$bario <- as.character(por_barrios.viviendas$coddistbar)
-# add leading 0 to barrios with only two cifras in coddistbar
-# por_barrios.viviendas <- por_barrios.viviendas %>% mutate(
-#   coddistbar = ifelse( nchar(coddistbar) == 2, 
-#                        paste0("0",coddistbar),
-#                        coddistbar
-#   )
-# )
+barrios <- readOGR("data/original/contornos/barrios_geo.json")
 
 # adds airbnb data to shapes
-barrios@data <- left_join(barrios@data, por_barrios.viviendas, by="barrio")
-barrios@data <- left_join(barrios@data, select(por_barrios,coddistbar,ratio2019_listings),by="barrio")
+barrios@data <- left_join(barrios@data, por_barrios,by= c("N_Barri" = "barrio"))
+# barrios@data <- left_join(barrios@data, por_barrios.viviendas, by= c("N_Barri" = "barrio"))
+
 
 # tmap numer of listings MAP ----------------
 colores <- c("#ededed", "#0cb2ff")
 breaks.n <- c(seq(0,2000,by = 250))
 
-# png(filename="images/airbnb/mapa-coropletas-numero-anuncios-barcelona-201909.png",width = 500,height = 600)
+xxx <- barrios@data
+
+png(filename="images/airbnb/mapa-coropletas-numero-anuncios-barcelona-201903.png",width = 500,height = 600)
 tm_shape(barrios) +
   tm_polygons(col="count",
               palette = colores, 
-              # breaks = breaks.n,
+              breaks = breaks.n,
               title = "anuncios", 
               border.alpha = 1, lwd = 0.2, legend.show = T, legend.outside = T,
               textNA="sin anuncios") +
@@ -595,12 +589,12 @@ tm_shape(barrios) +
             title.fontface = "bold",
             legend.format = list(text.separator = "-" )
   ) +
-  tm_legend(legend.text.size = 0.5, 
+  tm_legend(legend.text.size = 0.9, 
             legend.title.size = 2) 
-# dev.off()
+dev.off()
 
 # tmap Ratio anuncios / 100 viviendas ----------------
-breaks.ratio <- c(0,1,2,4,6,8,10,12,14,16)
+breaks.ratio <- c(0,1,2,4,6,8,10,12,14,16,18)
 
 # to select which labels are displayed
 barrios_select <- barrios %>% filter(ratio2019_listings >3)
@@ -613,16 +607,19 @@ tm_shape(barrios) +
               title = "",
               border.alpha = 1, lwd = 0.7,
               textNA="sin anuncios") +
+  # names of barrios on top
+  # tm_text("N_Barri", size="ratio2019_listings") +
   # to display labels on top
   # tm_shape(barrios_select) +
-  #   tm_text("nombre", size = 0.8, col = "black" ) +
-  # tm_shape(distritos) +
-  #   tm_borders(lwd=0.9, col = "black") +
+        # tm_text("N_Barri", size="ratio2019_listings") +
   tm_shape(municipios) +
-  tm_borders(lwd=0.1, col = "black") +
+    tm_borders(lwd=0.1, col = "black") +
+  tm_shape(distritos) +
+    tm_borders(lwd=0.7, col = "black") +
+    # tm_text("N_Distri") +
   tm_layout(between.margin = 5, frame = FALSE,
             fontfamily = "Roboto Condensed", 
-            main.title = "Anuncios airbnb por 100 domicilios",
+            main.title = "Anuncios de Airbnb por cada 100 domicilios",
             main.title.size = 1.1,
             main.title.fontface = "bold",
             title = "" ,
@@ -633,8 +630,8 @@ tm_shape(barrios) +
             legend.text.size = 1,
             legend.position = c("left","bottom"),
             legend.bg.color = "white",
-            legend.bg.alpha = 0.8,
-            legend.format = list(text.separator = "-")
+            legend.format = list(text.separator = "-"),
+            legend.bg.alpha = 0
   ) 
 dev.off()
 
@@ -647,35 +644,105 @@ airbnb <- airbnbsource %>% select(longitude,latitude,room_type)
 coordinates(airbnb) <- ~longitude+latitude
 
 # to select which labels are displayed
-barrios_select <- barrios %>% filter(ratio2018_room_type > 1)
+barrios_select <- barrios %>% filter(ratio2019_room_type > 1)
 distritos_select <- distritos %>% filter( nombre == "CIUTAT VELLA" 	| nombre == "ALGIROS" ) #| nombre == "POBLATS MARITIMS"
 
 png(filename="images/airbnb/mapa-coropletas-ratio-anuncios-vivcompletas-100viv-barcelona-201903.png",width = 2500,height = 2700)
-tm_polygons( col="ratio2018_room_type",
-             palette = colores,
-             breaks = breaks.ratio,
-             title = "",
-             border.alpha = 1, lwd = 0.7,
-             textNA="sin anuncios"
-) +
-  # tm_shape(barrios_select) +
-  tm_shape(barrios) +
-  tm_text("nombre", size = 1.2, col = "black", remove.overlap = TRUE) +
+# TODO fix
+# tm_shape(barrios) +
+#   tm_polygons( col="ratio2019_room_type",
+#              palette = colores,
+#              breaks = breaks.ratio,
+#              title = "",
+#              border.alpha = 1, lwd = 0.7,
+#              textNA="sin anuncios"
+# ) +
+#   # tm_shape(barrios_select) +
+#   tm_shape(barrios) +
+#   tm_text("nombre", size = 1.2, col = "black", remove.overlap = TRUE) +
+#   # airbnb listings
+#   tm_shape(airbnb) +
+#   tm_dots(alpha=0.3,size=0.06) + #col = "room_type",
+#   tm_shape(distritos) +
+#   tm_borders(lwd=0.9, col = "black") +
+#   # nombre de distritos
+#   # tm_shape(distritos) +
+#   #   tm_text("nombre", size = 1.5, col = "#000099", just="bottom") + #, just="left"
+#   tm_shape(municipios) +
+#   tm_borders(lwd=0.1, col = "black") +
+#   tm_layout(between.margin = 5, frame = FALSE,
+#             fontfamily = "Roboto Condensed", 
+#             main.title = "Anuncios viviendas completas por 100 domicilios",
+#             main.title.size = 1.1,
+#             main.title.fontface = "bold",
+#             title = "" ,
+#             title.size = 2,
+#             title.position = c("center","top"),
+#             title.fontface = "bold",
+#             legend.title.size = 1,
+#             legend.text.size = 1,
+#             legend.position = c("left","bottom"),
+#             legend.bg.color = "white",
+#             legend.bg.alpha = 0.8,
+#             legend.format = list(text.separator = "-")
+#   ) 
+dev.off()
+
+
+# Ratio anuncios / 100 viviendas mapa interactivo------------------
+
+tmap_mode("view")
+
+# selects only few variables
+airbnb <- airbnbsource %>% select(longitude,latitude,room_type)
+
+# creates spatialpointsdataframe of airbnb listings
+coordinates(airbnb) <- ~longitude+latitude
+
+# to select which labels are displayed
+barrios_select <- barrios %>% filter(ratio2019_listings > 2)
+# distritos_select <- distritos %>% filter( nombre == "CIUTAT VELLA" 	| nombre == "ALGIROS" ) #| nombre == "POBLATS MARITIMS"
+
+interactive_map <- tm_shape(barrios) +
+  tm_polygons( col="ratio2019_listings",
+               palette = colores,
+               breaks = breaks.ratio,
+               title = "Anuncios Airbnb / 100 viviendas. BCN 03/2019",
+               border.alpha = 1, lwd = 0.7,
+               textNA="sin anuncios",
+               id = "N_Barri",
+               # popup.vars=TRUE
+               # popup.vars=c("count", "ratio2018_room_type","seabstienen"), #selects data in popup
+               popup.vars=c( 
+                 # "barrio" = "N_Barri",
+                 "ratio anuncios Airbnb / 100 viviendas"="ratio2019_listings",
+                 # "anuncios Airbnb"="suma",
+                 "anuncios Airbnb"="count",
+                 "viviendas existentes" = "Domicilis",
+                 "ratio anuncios vivienda / 100 viviendas"="ratio2019_room_type"
+                 # "viviendas principales" = "Principales"
+                 )
+  ) +
+  # nombre barrios
+  tm_shape(barrios_select) +
+  # tm_text("N_Barri", size = 1.3, col = "black", remove.overlap = TRUE,shadow = TRUE) +
+  tm_text("ratio2019_listings", size = 1.1, col = "#666666", remove.overlap = TRUE,shadow = TRUE) +
   # airbnb listings
-  tm_shape(airbnb) +
-  tm_dots(alpha=0.3,size=0.06) + #col = "room_type",
+  # tm_shape(airbnb) +
+  # tm_dots(alpha=0.3,size=0.06) + #col = "room_type",
+  # tm_dots(alpha=0.3,size=0.0006,popup.vars=FALSE) + #col = "room_type",
   tm_shape(distritos) +
-  tm_borders(lwd=0.9, col = "black") +
+    tm_borders(lwd=0.9, col = "black") +
+    tm_text("N_Distri", size = 1.3, col = "black", remove.overlap = TRUE,shadow = TRUE) +
   # nombre de distritos
   # tm_shape(distritos) +
   #   tm_text("nombre", size = 1.5, col = "#000099", just="bottom") + #, just="left"
-  tm_shape(municipios) +
-  tm_borders(lwd=0.1, col = "black") +
   tm_layout(between.margin = 5, frame = FALSE,
             fontfamily = "Roboto Condensed", 
-            main.title = "Anuncios viviendas completas por 100 domicilios",
+            main.title = "",
             main.title.size = 1.1,
             main.title.fontface = "bold",
+            fontface = "bold",
             title = "" ,
             title.size = 2,
             title.position = c("center","top"),
@@ -687,7 +754,11 @@ tm_polygons( col="ratio2018_room_type",
             legend.bg.alpha = 0.8,
             legend.format = list(text.separator = "-")
   ) 
-dev.off()
+  # zoom view to district selected
+  # tm_view(bbox = barrios %>% filter(nombre == "LA PETXINA" 	| nombre == "LA MALVA-ROSA" | nombre == "NA ROVELLA"))
+
+tmap_save(interactive_map,"/home/numeroteca/sites/airbnb/barcelona/output/html/ratio-airbnb-x-viv-coropletas-barcelona-201903.html")
+
 
 # Ratio anuncios vivienda completa / 100 viviendas mapa interactivo------------------
 
@@ -761,24 +832,23 @@ tmap_save(interactive_map,"/home/numeroteca/sites/airbnb/barcelona/output/html/r
 # Plazas de Airbnb por habitante -------------------------------
 # agrupa datos añadiendo código de distrito
 airbnb.distritos.plazas <- airbnbsource %>% 
-  group_by(distrito,coddistrit) %>% 
+  group_by(distrito) %>% 
   summarise(plazas=sum(accommodates),anuncios=n()) %>% 
   ungroup() %>%
   arrange(-plazas)
 
 airbnb.distritos.plazas.room_type <- airbnbsource %>% filter(room_type=="Vivienda completa") %>%
-  group_by(distrito,coddistrit,room_type) %>% 
+  group_by(distrito,room_type_s) %>% 
   summarise(viviendas_completas=n()) %>%  #suma el número de items por barrio
-  filter( !is.na(coddistrit) ) %>% 
   ungroup() %>% 
   arrange(-viviendas_completas) 
 
 # une datos de airbnb con datos de distritos
-por_distritos.plazas <- full_join(airbnb.distritos.plazas,select(habitantes_distritos,-distrito), by="coddistrit")
-por_distritos.plazas <- full_join(por_distritos.plazas,select(airbnb.distritos.plazas.room_type,-distrito,-room_type), by="coddistrit")
+por_distritos.plazas <- left_join(airbnb.distritos.plazas,viviendas_distritos, by=c("distrito" = "Nom_Districte") )
+por_distritos.plazas <- left_join(por_distritos.plazas, select(airbnb.distritos.plazas.room_type,distrito,viviendas_completas), by="distrito")
 
 # removes rows without código, it means that points are outside area
-por_distritos.plazas <- por_distritos.plazas %>% filter( !is.na(coddistrit) )
+por_distritos.plazas <- por_distritos.plazas %>% filter( !is.na(habitantes) )
 
 # añade datos de vivienda
 por_distritos.plazas <- full_join(por_distritos.plazas,select(por_distritos,-distrito,-count), by="coddistrit")
