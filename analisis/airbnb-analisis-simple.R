@@ -563,10 +563,12 @@ library(maptools)
 
 # load fresh data
 barrios <- readOGR("data/original/contornos/barrios_geo.json")
+distritos <- readOGR("data/original/contornos/distritos_geo.json")
 
 # adds airbnb data to shapes
 barrios@data <- left_join(barrios@data, por_barrios,by= c("N_Barri" = "barrio"))
 # barrios@data <- left_join(barrios@data, por_barrios.viviendas, by= c("N_Barri" = "barrio"))
+distritos@data <- left_join(distritos@data, por_distritos.plazas,by= c("N_Distri" = "distrito"))
 
 
 # tmap numer of listings MAP ----------------
@@ -591,6 +593,40 @@ tm_shape(barrios) +
   ) +
   tm_legend(legend.text.size = 0.9, 
             legend.title.size = 2) 
+dev.off()
+
+
+# tmap Ratio anuncios / 100 viviendas por distrito ----------------
+breaks.ratio.d <- c(0,1,2,4,6,8,10)
+
+png(filename="images/airbnb/mapa-coropletas-distritos-ratio-anuncios-100viv-barcelona-201903.png",width = 500,height = 700)
+tm_shape(distritos) +
+  tm_polygons(col="ratio2019_airbnbxviv",
+              palette = colores,
+              breaks = breaks.ratio.d,
+              title = "",
+              border.alpha = 1, lwd = 0.7,
+              textNA="sin anuncios") +
+  # names of barrios on top
+  tm_text("N_Distri") +
+  tm_shape(municipios) +
+  tm_borders(lwd=0.1, col = "black") +
+  tm_layout(between.margin = 5, frame = FALSE,
+            fontfamily = "Roboto Condensed", 
+            main.title = "Anuncios de Airbnb por cada 100 domicilios",
+            main.title.size = 1.1,
+            main.title.fontface = "bold",
+            title = "" ,
+            title.size = 2,
+            title.position = c("center","top"),
+            title.fontface = "bold",
+            legend.title.size = 1,
+            legend.text.size = 1,
+            legend.position = c("left","bottom"),
+            legend.bg.color = "white",
+            legend.format = list(text.separator = "-"),
+            legend.bg.alpha = 0
+  ) 
 dev.off()
 
 # tmap Ratio anuncios / 100 viviendas ----------------
@@ -879,12 +915,39 @@ ggplot(por_distritos.plazas) +
     aes(y=ratio2019_airbnbvivxviv,x=reorder(distrito,ratio2019_airbnbvivxviv))) +
   coord_flip()
 
-# barras ratios comparativas ----------
+# barras ratios comparativas distritos ----------
 png(filename="images/airbnb/ratio-listings-airbnb-anuncios-distritos-barcelona-201903.png",width = 600,height = 500)
 por_distritos.plazas %>% filter (!is.na(ratio2019_plazasxhab) ) %>%
   ggplot(aes(y=ratio2019_plazasxhab,x=reorder(distrito,ratio2019_plazasxhab))) + #order by Value or by -pos_ratio2019
-  geom_col(position = "dodge") +
+  geom_col(
+    position = "dodge") +
   # scale_y_continuous(limits = c(0,8.5), expand = c(0,0)) +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
+  theme(
+    panel.grid.minor.y = element_blank(), panel.grid.major.y = element_blank(),
+    legend.position = "bottom"
+  ) + 
+  labs(title = "Presencia de Airbnb en distritos. Marzo 2019. Barcelona",
+       subtitle = "Ratio de plazas de Airbnb por cada 100 habitantes",
+       y = "ratio anuncios Airbnb / 100 viviendas",
+       x = NULL,
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
+  geom_text(aes(label =ratio2019_plazasxhab),
+            position = position_dodge(width = 1), hjust = -0.1,
+            size=4,color="#777777",family = "Roboto Condensed") +
+  coord_flip()
+dev.off()
+
+# barras ratios comparativas distritos blues----------
+png(filename="images/airbnb/ratio-listings-airbnb-anuncios-distritos-barcelona-201903_blues.png",width = 600,height = 500)
+por_distritos.plazas %>% filter (!is.na(ratio2019_plazasxhab) ) %>%
+  ggplot(aes(y=ratio2019_plazasxhab,x=reorder(distrito,ratio2019_plazasxhab))) + #order by Value or by -pos_ratio2019
+  geom_col(
+    aes(fill=ratio2019_plazasxhab),
+    position = "dodge") +
+  # scale_y_continuous(limits = c(0,8.5), expand = c(0,0)) +
+  # blues
+  scale_fill_gradient( low = "#ededed", high= "#0cb2ff") +
   theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
   theme(
     panel.grid.minor.y = element_blank(), panel.grid.major.y = element_blank(),
