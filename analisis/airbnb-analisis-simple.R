@@ -322,12 +322,16 @@ por_barrios %>% filter(!is.na(ratio2019_listings)) %>%
 dev.off()
 
 # Ratio anuncios por viviendas en barrios. Barras. Top 15-------
-png(filename="images/airbnb/ratio-listings-airbnb-anuncios-barrios-barcelona-201903_top15-blues.png",width = 750,height = 600)
-por_barrios %>% arrange(-ratio2019_listings) %>% head(15) %>%
+png(filename="images/airbnb/ratio-listings-airbnb-anuncios-barrios-barcelona-201903_top25-blues.png",width = 750,height = 800)
+por_barrios %>% arrange(-ratio2019_listings) %>% head(25) %>%
   ggplot(aes(x = reorder(barrio, ratio2019_listings), y = ratio2019_listings)) + #order by Value or by -pos_ratio2019
-  geom_col(position = "dodge", aes(fill=ratio2019_listings)) +
+  geom_col(position = "dodge", aes(fill=ratio2019_listings),
+           color="#888888",size=0.2) +
   # scale_y_continuous(limits = c(0,8.5), expand = c(0,0)) +
-  scale_fill_gradient( low = "#ededed", high= "#0cb2ff") +
+  # scale_fill_gradient( low = "#ededed", high= "#0cb2ff") +
+  scale_fill_gradientn(colours = c("#ededed","#d4e6ee","#bbe0f0","#a2d9f2","#8ad3f4","#6fcbf7","#56c5f9","#3dbefb","#24b8fd","#0cb2ff"),
+                       values =scales::rescale(c(0,1,2,4,6,8,10,12,14,16,18))
+  ) +
   theme_minimal(base_family = "Roboto Condensed", base_size = 18) +
   theme(
     panel.grid.minor.y = element_blank(), panel.grid.major.y = element_blank(),
@@ -335,7 +339,7 @@ por_barrios %>% arrange(-ratio2019_listings) %>% head(15) %>%
     plot.title = element_text(hjust = 1),
     plot.subtitle = element_text(hjust = 1)
   ) + 
-  labs(title = "Presencia de Airbnb en barrios. Top15. Marzo 2019. Barcelona",
+  labs(title = "Presencia de Airbnb en barrios. Top 25. Marzo 2019. Barcelona",
        subtitle = "Ratio de anuncios de Airbnb por cada 100 viviendas",
        y = "ratio anuncios Airbnb / 100 viviendas",
        x = NULL,
@@ -345,6 +349,36 @@ por_barrios %>% arrange(-ratio2019_listings) %>% head(15) %>%
             size=5,color="#777777",family = "Roboto Condensed") +
   coord_flip()
 dev.off()
+
+png(filename="images/airbnb/ratio-plazas-100hab-airbnb-barrios-barcelona-201903_top25-oranges.png",width = 750,height = 800)
+por_barrios %>% arrange(-ratio2019_plazasxhab) %>% head(25) %>%
+  ggplot(aes(x = reorder(barrio, ratio2019_plazasxhab), y = ratio2019_plazasxhab)) + #order by Value or by -pos_ratio2019
+  geom_col(position = "dodge", aes(fill=ratio2019_plazasxhab),
+           color="#888888",size=0.2) +
+  # scale_y_continuous(limits = c(0,8.5), expand = c(0,0)) +
+  # scale_fill_gradient( low = "#ededed", high= "#0cb2ff") +
+  scale_fill_gradientn(colours = c("#ededed","#f0e4d5","#f3dbbe","#f6d1a8","#f9c990","#fcc078",
+                                   "#ffb55d","#ffab42","#ffa31c","#ff9800","#ff8e00","#ff8e00","#ff8400"),
+                       values =scales::rescale(c(0,1,2,4,6,8,10,12,14,16,18,20,22))
+  ) +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 18) +
+  theme(
+    panel.grid.minor.y = element_blank(), panel.grid.major.y = element_blank(),
+    legend.position = "none",
+    plot.title = element_text(hjust = 1),
+    plot.subtitle = element_text(hjust = 1)
+  ) + 
+  labs(title = "Presencia de Airbnb en barrios. Top 25. Marzo 2019. Barcelona",
+       subtitle = "Ratio de plazas de Airbnb por cada 100 habitantes",
+       y = "ratio plazas de Airbnb / 100 habitantes",
+       x = NULL,
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
+  geom_text(aes(label = ratio2019_plazasxhab, y= ratio2019_plazasxhab/2 ),
+            hjust = 0.5,
+            size=5,color="#777777",family = "Roboto Condensed") +
+  coord_flip()
+dev.off()
+
 
 # Ratio anuncios pisos completos por viviendas completas en barrios. Barras -------
 png(filename="images/airbnb/ratio-airbnb-viviendas-completas-barrios-barcelona-201903.png",width = 900,height = 1400)
@@ -556,7 +590,7 @@ grid.arrange(plot2v,plot1v,ncol=2,widths=c(2,3))
 dev.off()
 
 
-# Mapas de coropletas ---------------------------------------------------------------------
+# Prepare mapas de coropletas con tmap ---------------------------------------------------------------------
 library(tmap)
 library(gpclib)
 library(maptools)
@@ -668,6 +702,50 @@ tm_shape(barrios) +
             legend.bg.color = "white",
             legend.format = list(text.separator = "-"),
             legend.bg.alpha = 0
+  ) 
+dev.off()
+
+# tmap Ratio plazas / 100 habitantes ----------------
+breaks.ratio.hab <- c(0,1,2,4,6,8,10,12,14,16,18,20,22)
+
+# to select which labels are displayed
+barrios_select <- barrios %>% filter(ratio2019_plazasxhab >3)
+
+colores.r <- c("#ededed", "#fa8c00")
+
+png(filename="images/airbnb/mapa-coropletas-ratio-plazas-100hab-barcelona-201903.png",width = 500,height = 700)
+tm_shape(barrios) +
+  tm_polygons(col="ratio2019_plazasxhab",
+              palette = colores.r,
+              breaks = breaks.ratio.hab,
+              title = "",
+              border.alpha = 1, lwd = 0.7,
+              textNA="sin anuncios") +
+  # names of barrios on top
+  # tm_text("N_Barri", size="ratio2019_listings") +
+  # to display labels on top
+  # tm_shape(barrios_select) +
+  #   tm_text("ratio2019_plazasxhab", col="#777777") +
+  tm_shape(municipios) +
+  tm_borders(lwd=0.1, col = "black") +
+  tm_shape(distritos) +
+  tm_borders(lwd=0.7, col = "black") +
+  tm_text("N_Distri") +
+  tm_layout(between.margin = 5, frame = FALSE,
+            fontfamily = "Roboto Condensed", 
+            main.title = "Plazas de Airbnb por cada 100 habitantes",
+            main.title.size = 1.1,
+            main.title.fontface = "bold",
+            title = "" ,
+            title.size = 2,
+            title.position = c("center","top"),
+            title.fontface = "bold",
+            legend.title.size = 1,
+            legend.text.size = 0.9,
+            legend.position = c("LEFT","BOTTOM"),
+            legend.bg.color = "white",
+            legend.format = list(text.separator = "-"),
+            legend.bg.alpha =0.1
   ) 
 dev.off()
 
@@ -866,7 +944,17 @@ tmap_save(interactive_map,"/home/numeroteca/sites/airbnb/barcelona/output/html/r
 
 
 # Plazas de Airbnb por habitante -------------------------------
-# agrupa datos añadiendo código de distrito
+# agrupa datos por barrio
+airbnb.barrios.plazas <- airbnbsource %>% 
+  group_by(barrio) %>% 
+  summarise(plazas=sum(accommodates)) %>% 
+  ungroup() %>%
+  arrange(-plazas)
+
+por_barrios <- left_join(por_barrios,airbnb.barrios.plazas,by = "barrio")
+por_barrios$ratio2019_plazasxhab <- round(por_barrios$plazas/ por_barrios$Població *100,digits = 2)
+
+# agrupa datos por distrito
 airbnb.distritos.plazas <- airbnbsource %>% 
   group_by(distrito) %>% 
   summarise(plazas=sum(accommodates),anuncios=n()) %>% 
@@ -944,19 +1032,28 @@ por_distritos.plazas %>% filter (!is.na(ratio2019_plazasxhab) ) %>%
   ggplot(aes(y=ratio2019_plazasxhab,x=reorder(distrito,ratio2019_plazasxhab))) + #order by Value or by -pos_ratio2019
   geom_col(
     aes(fill=ratio2019_plazasxhab),
-    position = "dodge") +
+    position = "dodge", color="#888888",size=0.1
+    ) +
   # scale_y_continuous(limits = c(0,8.5), expand = c(0,0)) +
   # blues
-  scale_fill_gradient( low = "#ededed", high= "#0cb2ff") +
+  # scale_fill_gradient( low = "#ededed", high= "#0cb2ff") +
+  scale_fill_gradientn(colours = c("#ededed","#c0e1f0","#93d5f4","#66c9f7","#38bdfb","#0cb2ff"),
+                       values =scales::rescale(c(0,1,2,4,6,8,10,12))
+  ) +
+  # + scale_fill_gradient(high = "springgreen4", low= "grey90", name="Sum", 
+  #                       labels = c("5,000,000", "4,000,000", "3,000,000", "2,000,000", "1,000,000"),
+  #                       breaks = c(5000000, 4000000, 3000000, 2000000, 1000000))
+  
   theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
   theme(
     panel.grid.minor.y = element_blank(), panel.grid.major.y = element_blank(),
-    legend.position = "bottom"
+    legend.position = "none"
   ) + 
   labs(title = "Presencia de Airbnb en distritos. Marzo 2019. Barcelona",
        subtitle = "Ratio de plazas de Airbnb por cada 100 habitantes",
        y = "ratio anuncios Airbnb / 100 viviendas",
        x = NULL,
+       # fill="ratio",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb") +
   geom_text(aes(label =ratio2019_plazasxhab),
             position = position_dodge(width = 1), hjust = -0.1,
@@ -964,7 +1061,7 @@ por_distritos.plazas %>% filter (!is.na(ratio2019_plazasxhab) ) %>%
   coord_flip()
 dev.off()
 
-# barras de los tres ratios ------------------
+  # barras de los tres ratios ------------------
 png(filename="images/airbnb/ratios-airbnb-distritos-barcelona-201903_b.png",width = 900,height = 450)
 dist.plazas_long %>% filter (!is.na(ratio) ) %>%
 ggplot() + 

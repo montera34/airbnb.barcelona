@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="es-ES">
+
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alumnado extranjero en zonas escolares de Euskadi</title>
+
+<!-- Bootstrap -->
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet"> 
+
+<!--  basado en http://bl.ocks.org/numeroteca/1941df6cbcb6801cb1299a137ecf891c a su vez basado en cartogramas de Martín González https://martingonzalez.net/ -->
+
+<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+  <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+  <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+<![endif]-->
+
+<style>
+body {
+font-family: 'Roboto', sans-serif;
+}
+.text-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+.label {
+  font-size: 20px;
+  fill: black;
+}
+
+.tooltip {
+  position: absolute;
+  background: white;
+  font-size: 14px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  background-color:rgba(255, 255, 255, 0.95);
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+rect:hover {
+  stroke: black;
+  stroke-width: 2px;
+ }
+rect {
+  cursor:pointer;
+  stroke: black;
+  stroke-width: 0.4px;
+}
+
+#rectangulos2 {
+	mix-blend-mode: multiply;
+}
+</style>
+
+<link type="image/x-icon" href="../favicon.ico" rel="shortcut icon" />
+<link type="image/png" sizes="256x256" href="../favicon.png" rel="icon" />
+</head>
+<body>
+<div id="cartogram"></div>
+
+<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src="https://d3js.org/topojson.v1.min.js"></script>
+<script type="text/javascript" src="https://d3js.org/d3-composite-projections.js"></script>
+<script type="text/javascript">
+// Cartograma based on https://bl.ocks.org/martgnz code
+// More info at http://lab.montera34.com/segregacionescolar/
+
+var margin = {top: 10, right: 20, bottom: 10, left:0},
+    width = 800- margin.left - margin.right,
+    height = 810 - margin.top - margin.bottom,
+    padding = 2;
+
+// language
+var lengua = "es";
+var zonaEscolar = "zona escolar",
+alumnadoExtPub = "alumnado es extranjero en la red <strong>pública</strong>",
+alumnadoExtPriv = "alumnado extranjero en la red <strong>privada</strong>" , 
+alumnadoExtMedia = "alumnado extranjero de media",
+diferencia = "diferencia",
+indiceDes = "índice desigualdad extranjeros",
+totalExt = "total alumnado extranjero",
+alumnado = "alumnado",
+alumnadoExtranjero = "% alumando extranjero",
+presenciaExt = "Presencia alumnado extranjero";
+
+// Rectangle size
+//must calculate manually the relationship of the squares of this values to match the min and max value ofthe domains
+// first value is the minimum size of square side, and the second the maximun size of square side
+var rectSize = d3.scaleSqrt()
+    .range([5, 44])
+
+// Font size scale
+var fontSize = d3.scaleLinear()
+    .range([2,72.94])
+
+// Color
+var colorPriv = d3.scaleLinear()
+    .domain([0, 22])
+    .range(['#fff','#053874'])
+    .interpolate(d3.interpolateLab)
+
+// Adds cartogram svg
+var svg = d3.select("#cartogram").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate("+ margin.left +"," + margin.top + ")");
+
+// Title
+/*
+var title = svg.append('g').attr('id','title');
+title.append("text")
+		.attr("text-anchor", "end")
+		.attr("dy", 10)
+		.attr("dx", width)
+		.text(presenciaExt)
+		.style("fill", "black")
+		.style("font-size", "18px");
+*/
+
+// Creates groups for rectangles
+var rectangulos = svg.append('g').attr('id','rectangulos');
+var rectangulos2 = svg.append('g').attr('id','rectangulos2');
+
+// Adds tooltip
+var tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "tooltip")
+
+d3.json("barrios.json", function(err, data) {
+console.log(data)
+// move projection inside json to be able to get data
+var projection = d3.geoMercator().fitSize([width, height], topojson.feature(data, data.objects.barrios));
+
+var path = d3.geoPath().projection(projection);
+
+    // 1. Features we are painting
+    zona = topojson.feature(data, data.objects.barrios).features
+
+    // Rect size scale
+    rectSize.domain(d3.extent(zona, function(d) {return d.properties.Domicilis }))
+
+    // 2. Create on each feature the centroid and the positions
+    zona.forEach(function(d) {
+        d.pos = projection(d3.geoCentroid(d))
+        d.x = d.pos[0]
+        d.y = d.pos[1]
+        d.area = rectSize(d.properties.Domicilis) / 0.7 // Select how to scale the squares. Try and decide
+    })
+
+    // Font size scale
+    fontSize.domain(d3.extent(zona, function(d) {return d.area }))
+
+    // 3. Collide force
+    var simulation = d3.forceSimulation(zona)
+        .force("x", d3.forceX(function(d) { return d.pos[0] }).strength(.1))
+        .force("y", d3.forceY(function(d) { return d.pos[1] }).strength(.1))
+        .force("collide", collide)
+
+    // 4. Number of simulations
+    for (var i = 0; i < 200; ++i) simulation.tick()
+
+    // 5. Paint the cartogram
+    var rect = rectangulos.selectAll("g")
+        .data(zona)
+        .enter()
+        .append("g")
+        .attr("class", function(d) { return "zona: " + d.properties.zona })
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")" })
+                  .on("mousemove", showTooltip) // AÑADIR EVENTO SHOW TOOLTIP
+					.on("mouseout", hideTooltip) // OCULTAR TOOLTIP
+
+    rect.append("rect")
+        .each(function(d) {
+            d3.select(this)
+              .attr("width", d.area)
+              .attr("height", d.area)
+              .attr("x", -d.area / 2)
+              .attr("y", -d.area / 2)
+              .attr("fill", function(d) {
+		            if  ( d.properties.ratio2018_listings == null)  {
+									return "#CCC";
+								} else {
+									return colorPriv(d.properties.ratio2018_listings)
+								}
+							})
+              //color(d.properties.indice_desigualdad)
+              .attr("stroke", "#CCC")
+              .attr("stroke-width", 1)
+              .attr("rx", 0.5)
+          })
+/* text on top of rectangles*/
+    rect.append("text")
+        .each(function(d) {
+            d3.select(this)
+                .attr("text-anchor", "middle")
+                .attr("dy", 12)
+								.text( function(d) {
+									var punto = (d.properties.N_Barri.length > 5)? "." : "";
+									return d.properties.N_Barri.substring(0,5) + punto;
+								})
+                .style("fill", "black")
+                .style("font-size", fontSize(d.area) + "px")
+                .style("font-size", "11px")
+        })
+
+      function showTooltip(d) {
+          // Fill the tooltip
+          tooltip.html("<div class='table-responsive'><strong>" + d.properties.N_Barri + "</strong> (" +d.properties.N_Distri + ")</div>" +
+            "<table class='table table-condensed table-striped'>" +
+                "<tr>" +
+                    "<td style='text-align:right'><strong>"+ d.properties.total2018  +"</strong></td><td>anuncios airbnb</td>" +
+                "</tr>" +
+                "<tr>" +
+                    "<td style='text-align:right'><strong>"+ d.properties.ratio2018_listings  +"</strong></td><td>anuncios / 100 viviviendas</td>" +
+                "</tr>" +
+              "</table>")
+            .style("opacity", 1)
+
+          tooltip.style("left", (d3.event.pageX + 20) + "px")
+          tooltip.style("top", (d3.event.pageY + 23) + "px")
+
+        }
+
+      function hideTooltip(d) {
+        // Hide tooltip
+        tooltip.style("opacity", 0)
+      }
+
+})
+
+// From http://bl.ocks.org/mbostock/4055889
+function collide() {
+  for (var k = 0, iterations = 4, strength = 0.5; k < iterations; ++k) {
+    for (var i = 0, n = zona.length; i < n; ++i) {
+      for (var a = zona[i], j = i + 1; j < n; ++j) {
+        var b = zona[j],
+            x = a.x + a.vx - b.x - b.vx,
+            y = a.y + a.vy - b.y - b.vy,
+            lx = Math.abs(x),
+            ly = Math.abs(y),
+            r = a.area/2 + b.area/2 + padding;
+        if (lx < r && ly < r) {
+          if (lx > ly) {
+            lx = (lx - r) * (x < 0 ? -strength : strength);
+            a.vx -= lx, b.vx += lx;
+          } else {
+            ly = (ly - r) * (y < 0 ? -strength : strength);
+            a.vy -= ly, b.vy += ly;
+          }
+        }
+      }
+    }
+  }
+}
+</script>
+</body>
