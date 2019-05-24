@@ -66,10 +66,13 @@ data_long <- todos
 # data_long$fechab <- strapplyc( as.character(data_long$date), "([0-9]*)", simplify = TRUE)
 data_long$fechab <- as.Date( paste(20,as.character(data_long$date),sep=""), "%Y%m%d")
 
+# has license --------
 # table(data_long$calculated_host_listings_count)
 # has license
 data_long$has.license <- "sin licencia"
 data_long[data_long$license != "",]$has.license <- "con licencia"
+data_long[data_long$license == "Exempt",]$has.license <- "exento"
+
 
 # classify by type of host ----------------------------------------------------------------------------
 data_long$host.type <- ""
@@ -207,7 +210,7 @@ table(pruebalicense$Freq)
 # B.1 With license---------------------------------
 
 # paletter green red
-semaforo <- c("#458b00","#c80100")
+semaforo <- c("#458b00","orange","#c80100")
 
 haslicense <- data_long %>% group_by(fechab,has.license) %>% summarise(anuncios=n())
 
@@ -237,12 +240,12 @@ ggplot(NULL) +
     axis.ticks.x = element_line(color = "#000000"),
     legend.position = "top"
   ) +
-  labs(title = "Número de anuncios publicados con y sin licencia",
+  labs(title = "Número de anuncios publicados según licencia",
        subtitle = paste("Airbnb. ", local_name," ",period,sep=""),
        y = "número de anuncios",
        x = "",
        caption = caption,
-       color = "Tiene" ) 
+       color = "" ) 
 dev.off()
 
 # B.2 With license and room type---------------------------------
@@ -250,6 +253,14 @@ haslicense.roomtype <- data_long %>% group_by(fechab,has.license,room_type.s) %>
 
 png(filename=paste("images/airbnb/eliminados/anuncios-",local_basic,"-por-mes-linea-license-alojamiento.png", sep = ""),width = 1000,height = 400)
 ggplot(NULL) + 
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  geom_line(data=haslicense.roomtype,
+            aes(fechab,anuncios,color=has.license),size=1.5) +
+  scale_color_manual(values=semaforo) +
+  annotate("text",x=as.Date("2018-05-28"),y=7000,label="acuerdo",color="#000000",size=5,hjust=1,family = "Roboto Condensed") +
+  scale_y_continuous(limits=c(0, max(haslicense.roomtype$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
+  # geom_text(data=filter(dates.count,fechab > as.Date("2019-03-01")),
+  #           aes(fechab+10,anuncios,label=format(anuncios, nsmall=1, big.mark=".")), size=4,hjust=0) +
   geom_text_repel(data=filter(haslicense.roomtype, fechab > maxdate-1),
                   aes(fechab+10,anuncios,label=paste(format(anuncios, nsmall=1, big.mark=".") , sep = "")), 
                   nudge_x = 35, # adjust the starting y position of the text label
@@ -258,14 +269,6 @@ ggplot(NULL) +
                   family = "Roboto Condensed",
                   direction="y"
   ) +
-  geom_line(data=haslicense.roomtype,
-            aes(fechab,anuncios,color=has.license),size=1.5) +
-  scale_color_manual(values=semaforo) +
-  annotate("text",x=as.Date("2018-05-28"),y=7000,label="acuerdo",color="#000000",size=5,hjust=1,family = "Roboto Condensed") +
-  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  scale_y_continuous(limits=c(0, max(haslicense.roomtype$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
-  # geom_text(data=filter(dates.count,fechab > as.Date("2019-03-01")),
-  #           aes(fechab+10,anuncios,label=format(anuncios, nsmall=1, big.mark=".")), size=4,hjust=0) +
   theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
   theme(
     panel.grid.minor.x = element_blank(),
@@ -274,12 +277,12 @@ ggplot(NULL) +
     axis.ticks.x = element_line(color = "#000000"),
     legend.position = "top"
   ) +
-  labs(title = "Número de anuncios publicados con y sin licencia por tipo de alojamiento",
+  labs(title = "Número de anuncios publicados según licencia por tipo de alojamiento",
        subtitle = paste("Airbnb. ", local_name," ",period,sep=""),
        y = "número de anuncios",
        x = "",
        caption = caption,
-       color = "Tiene" ) +
+       color = "" ) +
   facet_wrap(~room_type.s)
 dev.off()
 
@@ -288,6 +291,14 @@ haslicense.hosttype <- data_long %>% group_by(fechab,has.license,host.type) %>% 
 
 png(filename=paste("images/airbnb/eliminados/anuncios-",local_basic,"-por-mes-linea-license-host.png", sep = ""),width = 1000,height = 400)
 ggplot(NULL) + 
+  geom_line(data=haslicense.hosttype,
+            aes(fechab,anuncios,color=has.license),size=1.5) +
+  scale_color_manual(values=semaforo) +
+  annotate("text",x=as.Date("2018-05-28"),y=9000,label="acuerdo",color="#000000",size=5,hjust=1,family = "Roboto Condensed") +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  scale_y_continuous(limits=c(0, max(haslicense.roomtype$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
+  # geom_text(data=filter(dates.count,fechab > as.Date("2019-03-01")),
+  #           aes(fechab+10,anuncios,label=format(anuncios, nsmall=1, big.mark=".")), size=4,hjust=0) +
   geom_text_repel(data=filter(haslicense.hosttype, fechab > maxdate-1),
                   aes(fechab+10,anuncios,label=paste(format(anuncios, nsmall=1, big.mark=".") , sep = "")), 
                   nudge_x = 35, # adjust the starting y position of the text label
@@ -296,14 +307,6 @@ ggplot(NULL) +
                   family = "Roboto Condensed",
                   direction="y"
   ) +
-  geom_line(data=haslicense.hosttype,
-            aes(fechab,anuncios,color=has.license),size=1.5) +
-  scale_color_manual(values=semaforo) +
-  annotate("text",x=as.Date("2018-05-28"),y=7000,label="acuerdo",color="#000000",size=5,hjust=1,family = "Roboto Condensed") +
-  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  scale_y_continuous(limits=c(0, max(haslicense.roomtype$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
-  # geom_text(data=filter(dates.count,fechab > as.Date("2019-03-01")),
-  #           aes(fechab+10,anuncios,label=format(anuncios, nsmall=1, big.mark=".")), size=4,hjust=0) +
   theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
   theme(
     panel.grid.minor.x = element_blank(),
@@ -312,7 +315,7 @@ ggplot(NULL) +
     axis.ticks.x = element_line(color = "#000000"),
     legend.position = "top"
   ) +
-  labs(title = "Número de anuncios publicados con y sin licencia por tipo de alojamiento",
+  labs(title = "Número de anuncios publicados según licencia por tipo de host",
        subtitle = paste("Airbnb. ", local_name," ",period,sep=""),
        y = "número de anuncios",
        x = "",
@@ -328,6 +331,12 @@ haslicense.hosttype.roomtype <- data_long %>% group_by(fechab,has.license,host.t
 
 png(filename=paste("images/airbnb/eliminados/anuncios-",local_basic,"-por-mes-linea-license-host-room.png", sep = ""),width = 1000,height = 600)
 ggplot(NULL) + 
+  geom_line(data=haslicense.hosttype.roomtype,
+            aes(fechab,anuncios,color=has.license),size=1.5) +
+  scale_color_manual(values=semaforo) +
+  annotate("text",x=as.Date("2018-05-28"),y=7000,label="acuerdo",color="#000000",size=5,hjust=1,family = "Roboto Condensed") +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  scale_y_continuous(limits=c(0, max(haslicense.hosttype.roomtype$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
   geom_text_repel(data=filter(haslicense.hosttype.roomtype, fechab > maxdate-1),
                   aes(fechab+10,anuncios,label=paste(format(anuncios, nsmall=1, big.mark=".") , sep = "")), 
                   nudge_x = 35, # adjust the starting y position of the text label
@@ -336,12 +345,6 @@ ggplot(NULL) +
                   family = "Roboto Condensed",
                   direction="y"
   ) +
-  geom_line(data=haslicense.hosttype.roomtype,
-            aes(fechab,anuncios,color=has.license),size=1.5) +
-  scale_color_manual(values=semaforo) +
-  annotate("text",x=as.Date("2018-05-28"),y=7000,label="acuerdo",color="#000000",size=5,hjust=1,family = "Roboto Condensed") +
-  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  scale_y_continuous(limits=c(0, max(haslicense.hosttype.roomtype$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
   theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
   theme(
     panel.grid.minor.x = element_blank(),
@@ -359,23 +362,28 @@ ggplot(NULL) +
   facet_wrap(room_type.s~host.type)
 dev.off()
 
-# B
+# B xxxxx
 png(filename=paste("images/airbnb/eliminados/anuncios-",local_basic,"-por-mes-linea-host-room-license.png", sep = ""),width = 1000,height = 600)
 ggplot(NULL) + 
   geom_text_repel(data=filter(haslicense.hosttype.roomtype, fechab > maxdate-1),
-                  aes(fechab+10,anuncios,label=paste(format(anuncios, nsmall=1, big.mark=".") , sep = "")), 
-                  nudge_x = 35, # adjust the starting y position of the text label
-                  size=4,
-                  hjust=0,
-                  family = "Roboto Condensed",
-                  direction="y"
+                  aes(fechab+10,anuncios,label=paste(format(anuncios, nsmall=1, big.mark=".") , sep = "")),
+                                  nudge_x = 2, # adjust the starting y position of the text label
+                                  size=4,
+                                  hjust=0,
+                                  family = "Roboto Condensed",
+                                  direction="y",
+                                  segment.size = 0.2,
+                                  segment.color="#333333",
+                                  xlim  = c(as.Date(max(haslicense.hosttype.roomtype$fechab)),as.Date("2019-12-4"))
   ) +
   geom_line(data=haslicense.hosttype.roomtype,
             aes(fechab,anuncios,color=host.type),size=1.5) +
-  scale_color_manual(values=c("#eab73e","#a7b3cc")) +
+  # scale_color_manual(values=c("#eab73e","#a7b3cc")) +
+  scale_color_brewer(palette = "Dark2", type = "discrete") +
   annotate("text",x=as.Date("2018-05-28"),y=7000,label="acuerdo",color="#000000",size=5,hjust=1,family = "Roboto Condensed") +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
   scale_y_continuous(limits=c(0, max(haslicense.hosttype.roomtype$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
+  scale_x_date( limits=c( min(haslicense.hosttype.roomtype$fechab), max(haslicense.hosttype.roomtype$fechab + 300)) ) +
   theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
   theme(
     panel.grid.minor.x = element_blank(),
@@ -898,15 +906,15 @@ dates.count.distrito.license.room <- data_long %>%
   summarise(anuncios=n())
 
 # C.2.A -------------------------------
-png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-distrito-license-room.png", sep = ""),width = 1100,height = 800)
+png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-distrito-license-room.png", sep = ""),width = 1300,height = 800)
 dates.count.distrito.license.room %>% 
   ggplot () +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
   annotate("text",x=as.Date("2018-05-25"),y=950,label="acuerdo",color="#000000",
            size=5,family = "Roboto Condensed",hjust=1) +
   # geom_point(aes(fechab,anuncios,group=neighbourhood,color=neighbourhood),size=1) +
   geom_line(aes(fechab,anuncios,group=neighbourhood_group_cleansed,color=neighbourhood_group_cleansed),size=0.6) +
   scale_color_manual(values = getPalette(colourCountdistrict)) +
-  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
   # barrios labels
   geom_text_repel(data=filter(dates.count.distrito.license.room,fechab==as.Date("2019-03-08"),anuncios>200), 
                   aes(fechab+5,anuncios,label=paste(anuncios,neighbourhood_group_cleansed)),
@@ -921,7 +929,7 @@ dates.count.distrito.license.room %>%
   ) +
   scale_y_continuous(limits=c(0, max(dates.count.distrito.license.room$anuncios)),labels=function(x) format(x, big.mark = ".", scientific = FALSE)) +
   xlim(as.Date(min(dates.count.distrito.license.room$fechab)),as.Date("2020-06-4")) +
-  theme_minimal(base_family = "Roboto Condensed",base_size = 16) +
+  theme_minimal(base_family = "Roboto Condensed",base_size = 18) +
   theme(
     panel.grid.minor.x = element_blank(),
     panel.grid.major.x = element_blank(),
@@ -1029,7 +1037,7 @@ dates.count.distrito.license.room.uni %>%
   facet_wrap(room_type.s~has.license)
 dev.off()
 
-# counts listings por barrio y room type--------------------------------------------------------------
+  # counts listings por barrio y room type--------------------------------------------------------------
 dates.count.barrio.room <- data_long %>% group_by(fechab,neighbourhood_cleansed,room_type.s) %>% summarise(anuncios=n())
 
 png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-barrio-room.png", sep = ""),width = 1300,height = 700)
@@ -1200,14 +1208,14 @@ dev.off()
 # 4.3 Por distritos ---------------------------------------------------------------------------------------------------------
 # A counts listings por distrito --------------------------------------------------------------------
 dates.count.distrito <- data_long %>% group_by(fechab,neighbourhood_group_cleansed) %>% summarise(anuncios=n())
-
+# ssss
 png(filename=paste("images/airbnb/eliminados/anuncios-por-mes-distrito.png", sep = ""),width = 1000,height = 600)
 dates.count.distrito %>% 
   ggplot () +
   # se marcan meses de verano
   annotate("rect", alpha = .1,
-           xmin = c(as.Date("2017-06-21"),as.Date("2018-06-21")),
-           xmax = c(as.Date("2017-09-21"),as.Date("2018-09-21")),
+           xmin = c(as.Date("2015-06-21"),as.Date("2016-06-21"),as.Date("2017-06-21"),as.Date("2018-06-21")),
+           xmax = c(as.Date("2015-09-21"),as.Date("2016-09-21"),as.Date("2017-09-21"),as.Date("2018-09-21")),
            ymin = 0,
            ymax = Inf) +
   annotate("text",x=as.Date("2018-05-28"),y=5000,label="acuerdo",color="#000000",size=5,hjust=1,family = "Roboto Condensed") +
@@ -1250,8 +1258,8 @@ dates.count.distrito.room %>%
   ggplot () +
   # se marcan meses de verano
   annotate("rect", alpha = .1,
-           xmin = c(as.Date("2017-06-21"),as.Date("2018-06-21")),
-           xmax = c(as.Date("2017-09-21"),as.Date("2018-09-21")),
+           xmin = c(as.Date("2015-06-21"),as.Date("2016-06-21"),as.Date("2017-06-21"),as.Date("2018-06-21")),
+           xmax = c(as.Date("2015-09-21"),as.Date("2016-09-21"),as.Date("2017-09-21"),as.Date("2018-09-21")),
            ymin = 0,
            ymax = Inf) +
   annotate("text",x=as.Date("2018-05-25"),y=5000,label="acuerdo",color="#000000",
@@ -1296,8 +1304,8 @@ dates.count.distrito.host %>%
   ggplot () +
   # se marcan meses de verano
   annotate("rect", alpha = .1,
-           xmin = c(as.Date("2017-06-21"),as.Date("2018-06-21")),
-           xmax = c(as.Date("2017-09-21"),as.Date("2018-09-21")),
+           xmin = c(as.Date("2015-06-21"),as.Date("2016-06-21"),as.Date("2017-06-21"),as.Date("2018-06-21")),
+           xmax = c(as.Date("2015-09-21"),as.Date("2016-09-21"),as.Date("2017-09-21"),as.Date("2018-09-21")),
            ymin = 0,
            ymax = Inf) +
   annotate("text",x=as.Date("2018-05-25"),y=3200,label="acuerdo",color="#000000",
