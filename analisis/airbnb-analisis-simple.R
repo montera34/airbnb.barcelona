@@ -487,7 +487,7 @@ plot1 <-
         panel.grid.major.y = element_blank(),
         # legend.text = element_text(size = 10),
         # legend.title = element_text(size = 11),
-        legend.position=c(.6,.2)) +
+        legend.position=c(.6,.5)) +
   labs(title = "",
        subtitle = "Anuncios de Airbnb por cada 100 viviendas",
        y = "ratio anuncios Airbnb / 100 viviendas",
@@ -504,7 +504,7 @@ plot2 <-
   por_barrios.room_type %>%
   ggplot(aes(x = reorder(barrio, -pos_ratio2019), y = count, fill=room_type)) + #order by Value or by -pos_ratio2019
   geom_col(position = position_stack(reverse = TRUE)) +
-  scale_y_reverse(limits = c(2100,0), expand = c(0,50)) +
+  scale_y_reverse(limits = c(2200,0), expand = c(0,50)) +
   theme_minimal(base_family = "Roboto Condensed", base_size = 16) +
   theme(
     axis.title.x = element_text(margin = margin(20,0,0,0)),
@@ -515,7 +515,7 @@ plot2 <-
     axis.text.y = element_blank(),
     panel.grid.minor.y = element_blank(),
     panel.grid.major.y = element_blank(),
-    legend.position=c(.4,.2),
+    legend.position=c(.4,.5),
     plot.margin = unit(c(0.31,0,0.4,4), "cm")
   ) +
   labs(title = "Presencia de Airbnb en barrios de Barcelona. Marzo 2019",
@@ -1092,7 +1092,8 @@ library(geojsonio)
 
 barrios_json <- geojson_json(barrios)
 # salva como geojson
-geojson_write(barrios_json, file = "tmp/test_geojson")
+geojson_write(barrios_json, file = "data/output/airbnb/190308/ratios_barrios.json")
+write.csv(as.data.frame(barrios@data), file = "data/output/airbnb/190308/ratios_barrios.csv", row.names = FALSE)
 
 
 
