@@ -6,7 +6,7 @@
 local_activo_name <- "Barcelona" #cambia 'Barcelona' por el municipio que quieras analizar
 caption_1 <- "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb"
 fechas <- "2015-marzo 2019"
-fecha_estudio <- "190308"
+fecha_estudio <- "190308b"
 
 # ------ Get dates when data were scraped --------
 # Loads dates with listings data
@@ -15,14 +15,14 @@ dates <- c("150430","150717","150904","151002","160103","161107","161208","17010
            "180710","180814","180911","181010","181107","181210","190114","190206","190308")
 
 # creates data.frames to influde data
-anfitriones <- data.frame(matrix(0, ncol = 5, nrow = length(dates)))
-names(anfitriones) <- c("date","mas_de_5","n3.4","n2","n1")
+anfitriones <- data.frame(matrix(0, ncol = 6, nrow = length(dates)))
+names(anfitriones) <- c("date","mas_de_14","mas_de_5","n3.4","n2","n1")
 
-alojamientos <- data.frame(matrix(0, ncol = 5, nrow = length(dates)))
-names(alojamientos) <- c("date","mas_de_5","n3.4","n2","n1")
+alojamientos <- data.frame(matrix(0, ncol = 6, nrow = length(dates)))
+names(alojamientos) <- c("date","mas_de_14","mas_de_5","n3.4","n2","n1")
 
-plazas <- data.frame(matrix(0, ncol = 5, nrow = length(dates)))
-names(plazas) <- c("date","mas_de_5","n3.4","n2","n1")
+plazas <- data.frame(matrix(0, ncol = 6, nrow = length(dates)))
+names(plazas) <- c("date","mas_de_14","mas_de_5","n3.4","n2","n1")
 
 for (i in 1:length(dates)) {
   # read data
@@ -40,20 +40,22 @@ for (i in 1:length(dates)) {
   anfitriones$n1[i] <- nrow(n_alojamientos[n_alojamientos$alojamientos == 1,])
   anfitriones$n2[i] <- nrow(n_alojamientos[n_alojamientos$alojamientos == 2,])
   anfitriones$n3.4[i] <- nrow(n_alojamientos[(n_alojamientos$alojamientos == 3 |n_alojamientos$alojamientos == 4) ,])
-  anfitriones$mas_de_5[i] <- nrow(n_alojamientos[n_alojamientos$alojamientos >4,])
-  anfitriones$mas_de_5[i] <- nrow(n_alojamientos[n_alojamientos$alojamientos >4,])
+  anfitriones$mas_de_5[i] <- nrow(n_alojamientos[n_alojamientos$alojamientos >4 & n_alojamientos$alojamientos < 15,])
+  anfitriones$mas_de_14[i] <- nrow(n_alojamientos[n_alojamientos$alojamientos >14,])
   
   # Calcula cuantos alojamientos en total tienen los anfitriones con n alojamientos
   alojamientos$n1[i] <- sum(n_alojamientos[n_alojamientos$alojamientos == 1,"alojamientos"])
   alojamientos$n2[i] <- sum(n_alojamientos[n_alojamientos$alojamientos == 2,"alojamientos"])
   alojamientos$n3.4[i] <- sum(n_alojamientos[(n_alojamientos$alojamientos == 3 |n_alojamientos$alojamientos == 4),"alojamientos"])
-  alojamientos$mas_de_5[i] <- sum(n_alojamientos[n_alojamientos$alojamientos >4,"alojamientos"])
+  alojamientos$mas_de_5[i] <- sum(n_alojamientos[n_alojamientos$alojamientos > 4 & n_alojamientos$alojamientos < 15,"alojamientos"])
+  alojamientos$mas_de_14[i] <- sum(n_alojamientos[n_alojamientos$alojamientos >14,"alojamientos"])
   
   # Calcula cuantas plazas en total tienen los anfitriones con n alojamientos
   plazas$n1[i] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[n_alojamientos$alojamientos == 1,]$host_id,]$plazas)
   plazas$n2[i] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[n_alojamientos$alojamientos == 2,]$host_id,]$plazas)
   plazas$n3.4[i] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[(n_alojamientos$alojamientos == 3 | n_alojamientos$alojamientos == 4),]$host_id,]$plazas)
-  plazas$mas_de_5[i] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[n_alojamientos$alojamientos > 4,]$host_id,]$plazas)
+  plazas$mas_de_5[i] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[n_alojamientos$alojamientos > 4 & n_alojamientos$alojamientos < 15,]$host_id,]$plazas)
+  plazas$mas_de_14[i] <- sum(naccommodates[naccommodates$host_id %in% n_alojamientos[n_alojamientos$alojamientos > 14,]$host_id,]$plazas)
 }
 
 # parse date
@@ -62,9 +64,9 @@ alojamientos$datenew <- as.Date(alojamientos$date, "%y%m%d")
 plazas$datenew <- as.Date(plazas$date, "%y%m%d")
 
 # hosts per date
-anfitriones$sum <- rowSums(anfitriones[,2:5])
-alojamientos$sum <- rowSums(alojamientos[,2:5])
-plazas$sum <- rowSums(plazas[,2:5])
+anfitriones$sum <- rowSums(anfitriones[,2:6])
+alojamientos$sum <- rowSums(alojamientos[,2:6])
+plazas$sum <- rowSums(plazas[,2:6])
 
 # creates dataframe for percentages
 anfitriones_per <- anfitriones
@@ -76,17 +78,19 @@ anfitriones_per$n1 <- round(anfitriones_per$n1 / anfitriones_per$sum * 100,1)
 anfitriones_per$n2 <- round(anfitriones_per$n2 / anfitriones_per$sum * 100,1)
 anfitriones_per$n3.4 <- round(anfitriones_per$n3.4 / anfitriones_per$sum * 100,1)
 anfitriones_per$mas_de_5 <- round(anfitriones_per$mas_de_5 / anfitriones_per$sum * 100,1)
+anfitriones_per$mas_de_14 <- round(anfitriones_per$mas_de_14 / anfitriones_per$sum * 100,1)
 
 alojamientos_per$n1 <- round(alojamientos_per$n1 / alojamientos_per$sum * 100,1)
 alojamientos_per$n2 <- round(alojamientos_per$n2 / alojamientos_per$sum * 100,1)
 alojamientos_per$n3.4 <- round(alojamientos_per$n3.4 / alojamientos_per$sum * 100,1)
 alojamientos_per$mas_de_5 <- round(alojamientos_per$mas_de_5 / alojamientos_per$sum * 100,1)
+alojamientos_per$mas_de_14 <- round(alojamientos_per$mas_de_14 / alojamientos_per$sum * 100,1)
 
 plazas_per$n1 <- round(plazas_per$n1 / plazas_per$sum * 100,1)
 plazas_per$n2 <- round(plazas_per$n2 / plazas_per$sum * 100,1)
 plazas_per$n3.4 <- round(plazas_per$n3.4 / plazas_per$sum * 100,1)
 plazas_per$mas_de_5 <- round(plazas_per$mas_de_5 / plazas_per$sum * 100,1)
-
+plazas_per$mas_de_14 <- round(plazas_per$mas_de_14 / plazas_per$sum * 100,1)
 
 # color palete
 # palette1 <- c("#4292c6","#6baed6","#9ecae1","#fee5d9")
@@ -98,6 +102,7 @@ ggplot(anfitriones, aes(x=datenew))+
   geom_ribbon(aes(ymin = n1, ymax= n1+n2 ), fill="#9ecae1") +
   geom_ribbon(aes(ymin = n1+n2, ymax= n1+n2+n3.4 ), fill="#6baed6") +
   geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4+mas_de_5, ymax= n1+n2+n3.4+mas_de_5+mas_de_14 ), fill="#264c65") +
   # # text
   # geom_text(data=filter(anfitriones,datenew==as.Date("2019-03-08")), 
   #                 aes(
@@ -129,13 +134,15 @@ ggplot(anfitriones_per, aes(x=datenew))+
   geom_ribbon(aes(ymin = 0, ymax= n1 ), fill="#fee5d9") +
   geom_ribbon(aes(ymin = n1, ymax= n1+n2 ), fill="#9ecae1") +
   geom_ribbon(aes(ymin = n1+n2, ymax= n1+n2+n3.4 ), fill="#6baed6") +
-  geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= 100 ), fill="#4292c6") +
-  # geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  # geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= 100 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4+mas_de_5, ymax= 100 ), fill="#264c65") +
   # text
   geom_text( data=filter(anfitriones_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1/2,label=paste0(format(n1,decimal.mark=','),"% (1 anuncio)") ), hjust=0, family = "Roboto Condensed", size=5 ) +
   geom_text( data=filter(anfitriones_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2/2,label=paste0(format(n2,decimal.mark=','),"% (2 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
   geom_text( data=filter(anfitriones_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4/2,label=paste0(format(n3.4,decimal.mark=','),"% (3-4 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5 ) +
-  geom_text( data=filter(anfitriones_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4+mas_de_5/2,label=paste0(format(mas_de_5,decimal.mark=','),"% (más de 5 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
+  geom_text( data=filter(anfitriones_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4+mas_de_5/2,label=paste0(format(mas_de_5,decimal.mark=','),"% (5-14 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
+  geom_text( data=filter(anfitriones_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4+mas_de_5+mas_de_14+4,label=paste0(format(mas_de_14,decimal.mark=','),"% (más de 14 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
   # notes
   annotate("text",x=as.Date("2018-05-26"),y=5,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -165,6 +172,7 @@ ggplot(alojamientos, aes(x=datenew))+
   geom_ribbon(aes(ymin = n1, ymax= n1+n2 ), fill="#9ecae1") +
   geom_ribbon(aes(ymin = n1+n2, ymax= n1+n2+n3.4 ), fill="#6baed6") +
   geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4+mas_de_5, ymax= n1+n2+n3.4+mas_de_5+mas_de_14 ), fill="#264c65") +
   # notes
   annotate("text",x=as.Date("2018-05-26"),y=5000,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -190,13 +198,14 @@ ggplot(alojamientos_per, aes(x=datenew))+
   geom_ribbon(aes(ymin = 0, ymax= n1 ), fill="#fee5d9") +
   geom_ribbon(aes(ymin = n1, ymax= n1+n2 ), fill="#9ecae1") +
   geom_ribbon(aes(ymin = n1+n2, ymax= n1+n2+n3.4 ), fill="#6baed6") +
-  geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= 100 ), fill="#4292c6") +
-  # geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4+mas_de_5, ymax= n1+n2+n3.4+mas_de_5+mas_de_14 ), fill="#264c65") +
   # text
   geom_text( data=filter(alojamientos_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1/2,label=paste0(format(n1,decimal.mark=','),"% (1 anuncio)") ), hjust=0, family = "Roboto Condensed", size=5 ) +
   geom_text( data=filter(alojamientos_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2/2,label=paste0(format(n2,decimal.mark=','),"% (2 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
   geom_text( data=filter(alojamientos_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4/2,label=paste0(format(n3.4,decimal.mark=','),"% (3-4 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5 ) +
-  geom_text( data=filter(alojamientos_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4+mas_de_5/2,label=paste0(format(mas_de_5,decimal.mark=','),"% (más de 5 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
+  geom_text( data=filter(alojamientos_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4+mas_de_5/2,label=paste0(format(mas_de_5,decimal.mark=','),"% (5-14 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
+  geom_text( data=filter(alojamientos_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4+mas_de_5+mas_de_14/2,label=paste0(format(mas_de_14,decimal.mark=','),"% (más de 14 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
   # notes
   annotate("text",x=as.Date("2018-05-26"),y=5,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -225,6 +234,7 @@ ggplot(plazas, aes(x=datenew))+
   geom_ribbon(aes(ymin = n1, ymax= n1+n2 ), fill="#9ecae1") +
   geom_ribbon(aes(ymin = n1+n2, ymax= n1+n2+n3.4 ), fill="#6baed6") +
   geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4+mas_de_5, ymax= n1+n2+n3.4+mas_de_5+mas_de_14 ), fill="#264c65") +
   # notes
   annotate("text",x=as.Date("2018-05-26"),y=5000,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -250,13 +260,14 @@ ggplot(plazas_per, aes(x=datenew))+
   geom_ribbon(aes(ymin = 0, ymax= n1 ), fill="#fee5d9") +
   geom_ribbon(aes(ymin = n1, ymax= n1+n2 ), fill="#9ecae1") +
   geom_ribbon(aes(ymin = n1+n2, ymax= n1+n2+n3.4 ), fill="#6baed6") +
-  geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= 100 ), fill="#4292c6") +
-  # geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4+mas_de_5, ymax= n1+n2+n3.4+mas_de_5+mas_de_14 ), fill="#264c65") +
   # text
   geom_text( data=filter(plazas_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1/2,label=paste0(format(n1,decimal.mark=','),"% (1 anuncio)") ), hjust=0, family = "Roboto Condensed", size=5 ) +
   geom_text( data=filter(plazas_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2/2,label=paste0(format(n2,decimal.mark=','),"% (2 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
   geom_text( data=filter(plazas_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4/2,label=paste0(format(n3.4,decimal.mark=','),"% (3-4 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5 ) +
-  geom_text( data=filter(plazas_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4+mas_de_5/2,label=paste0(format(mas_de_5,decimal.mark=','),"% (más de 5 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
+  geom_text( data=filter(plazas_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4+mas_de_5/2,label=paste0(format(mas_de_5,decimal.mark=','),"% (5-14 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
+  geom_text( data=filter(plazas_per,datenew==as.Date("2019-03-08")), aes( datenew+5,n1+n2+n3.4+mas_de_5+mas_de_14/2,label=paste0(format(mas_de_14,decimal.mark=','),"% (más de 14 anuncios)") ), hjust=0, family = "Roboto Condensed", size=5  ) +
   # notes
   annotate("text",x=as.Date("2018-05-26"),y=5,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
@@ -277,3 +288,4 @@ ggplot(plazas_per, aes(x=datenew))+
        x = NULL,
        caption = caption_2) 
 dev.off()
+
