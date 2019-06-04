@@ -6,7 +6,7 @@
 local_activo_name <- "Barcelona" #cambia 'Barcelona' por el municipio que quieras analizar
 caption_1 <- "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb"
 fechas <- "2015-marzo 2019"
-fecha_estudio <- "190308b"
+fecha_estudio <- "190308"
 
 # ------ Get dates when data were scraped --------
 # Loads dates with listings data
@@ -171,7 +171,7 @@ ggplot(alojamientos, aes(x=datenew))+
   geom_ribbon(aes(ymin = 0, ymax= n1 ), fill="#fee5d9") +
   geom_ribbon(aes(ymin = n1, ymax= n1+n2 ), fill="#9ecae1") +
   geom_ribbon(aes(ymin = n1+n2, ymax= n1+n2+n3.4 ), fill="#6baed6") +
-  geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5 ), fill="#4292c6") +
+  geom_ribbon(aes(ymin = n1+n2+n3.4, ymax= n1+n2+n3.4+mas_de_5), fill="#4292c6") +
   geom_ribbon(aes(ymin = n1+n2+n3.4+mas_de_5, ymax= n1+n2+n3.4+mas_de_5+mas_de_14 ), fill="#264c65") +
   # notes
   annotate("text",x=as.Date("2018-05-26"),y=5000,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
@@ -188,7 +188,7 @@ ggplot(alojamientos, aes(x=datenew))+
   ) +
   labs(title = paste("Alojamientos por cantidad de alojamientos que gestiona cada anfitrión", sep = ""),
        subtitle = paste(local_activo_name,". ", fechas, sep = ""),
-       y = "nº anfitriones",
+       y = "nº alojamientos",
        x = NULL,
        caption = caption_2) 
 dev.off()
