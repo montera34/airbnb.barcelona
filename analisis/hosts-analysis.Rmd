@@ -1,5 +1,5 @@
 ---
-title: "Efecto Airbnb en Barcelona: hosts y licencias"
+title: "Efecto Airbnb en Madrid: hosts y licencias"
 date: "`r Sys.Date()`"
 output: html_document
 ---
@@ -11,10 +11,13 @@ output: html_document
 # Selecciona variables de configuración
 # región/lugar, fechas a analizar...
 local_activo_name <- "Barcelona" #cambia 'Barcelona' por el municipio que quieras analizar
-fecha <- "2018-09-11" # date last scraping
+# local_activo_name <- "Madrid" #cambia 'Barcelona' por el municipio que quieras analizar
+# fecha <- "2018-09-11" # date last scraping
+fecha <- "2019-03-08" # date last scraping
 # fecha <- "2019-02-27" # date last scraping
 # fecha <- "2018-09-27" # date last scraping
-fecha_mes <- "Septiembre 2018"
+# fecha_mes <- "Septiembre 2018"
+fecha_mes <- "Marzo 2019"
 
 # Coordinates 
 # Donostia
@@ -59,11 +62,10 @@ library(rgdal)
 
 # Carga datos -----
 # introduce el path de tu archivo listings. Necesitas desactivar Quotes, porque el texto incluye \"
-local_activo <- read.delim("../data/original/airbnb/180911/listings_barcelona_insideairbnb.csv",sep = ",")
-# local_activo <- read.delim("../../airbnb.madrid.analisis/data/original/airbnb/180911/listings_madrid_insideairbnb.csv",sep = ",")
-# local_activo <- read.delim("../../valencia2/data/original/airbnb/190227/listings_valencia_insideairbnb.csv",sep = ",")
-# local_activo <- read.delim("../../airbnbeuskadi/data/original/euskadi/insideairbnb/2018-09-27/data/listings-donosti-insideairbnb.csv",sep = ",")
-table(local_activo$city)
+# local_activo <- read.delim("../data/original/airbnb/180911/listings_barcelona_insideairbnb.csv",sep = ",")
+local_activo <- read.delim("../data/original/airbnb/190308/data/listings.csv.gz",sep = ",")
+# local_activo <- read.delim("../../madrid/data/original/airbnb/2019-03-08/data/listings.csv.gz",sep = ",")
+# table(local_activo$city)
 
 # Translate room type
 levels(local_activo$room_type) <- c("Vivienda completa","Habitación privada","Habitación compartida")
@@ -87,10 +89,14 @@ local_activo[!local_activo$license == "Exempt" & !local_activo$license == "",]$l
 
 attach(local_activo)
 
-# Load shapes
+# Load shapes Barcelona
 barrios <- readOGR("../data/original/contornos/barrios_geo.json")
-distritos <- readOGR("../data/original/contornos/distritos_geo.json")
+# distritos <- readOGR("../data/original/contornos/distritos_geo.json")
 municipios <- readOGR("../data/original/contornos/recintos_municipales_inspire_peninbal_wgs84_export_provincia-barcelona_geo.json")
+# Madrid
+# barrios <- readOGR("../../madrid/data/output/contornos/barrios-madrid.geojson")
+# municipios <- barrios 
+
 
 # Define paleta de color
 # palette1 <- c("#2171b5","#6baed6","#bdd7e7","#fee5d9")
@@ -144,7 +150,7 @@ theme(
   plot.caption=element_text(size=9)
 ) +
 labs(title=paste("Anuncios en ", local_activo_name, " por tipo de alojamiento y host", sep = ""),
-     subtitle = "Datos: InsideAirbnb 2018-09-11",
+     subtitle = "Datos: InsideAirbnb 2019-03-08",
      caption = caption_1,
      color="Tipo alojamiento")  +
 guides(colour = guide_legend(override.aes = list(size=3))) +
@@ -173,7 +179,7 @@ theme(
   plot.caption=element_text(size=9)
 ) +
 labs(title=paste("Anuncios en ", local_activo_name, " por tipo de alojamiento y host", sep = ""),
-     subtitle = "Datos: InsideAirbnb 2018-09-11",
+     subtitle = "Datos: InsideAirbnb 2019-03-08",
      caption = caption_1,
      color="Tipo alojamiento")  +
 guides(colour = guide_legend(override.aes = list(size=3))) +
@@ -202,7 +208,7 @@ theme(
   plot.caption=element_text(size=9)
 ) +
 labs(title=paste("Anuncios por tipo de alojamiento y número de anuncios gestiona host", sep = ""),
-     subtitle = paste("Airbnb en ",local_activo_name,". Datos: InsideAirbnb 2018-09-11",sep=""),
+     subtitle = paste("Airbnb en ",local_activo_name,". Datos: InsideAirbnb 2019-03-08",sep=""),
      caption = caption_1,
      color="Tipo alojamiento")  +
 guides(colour = guide_legend(override.aes = list(size=3))) +
@@ -246,6 +252,24 @@ Calculado por anuncios activos desde .
 # propietarios <- table(local_activo$host_id) #crea tabla con frecuencias (count) de anfitriones (host_id) con anuncios
 n_alojamientos <- local_activo %>% group_by(host_id, host_name) %>% summarize(alojamientos = n(),plazas = sum(accommodates) ) %>% arrange(desc(alojamientos))
 
+n_alojamientos.url <- local_activo %>% group_by(host_id, host_name,host_picture_url,host_url) %>% summarize(alojamientos = n(),plazas = sum(accommodates) ) %>% arrange(desc(alojamientos))
+
+# download images of top 10 hosts
+# images.hosts <- n_alojamientos.url[1:10,]$host_thumbnail_url
+# 
+# for (i in 1:25) {
+#   print(i)
+#   print(n_alojamientos.url$host_picture_url[i])
+#   print(paste("../data/original/airbnb/190308/images/top-",i,".jpg",sep=""))
+#   download.file(as.character(n_alojamientos.url$host_picture_url[i]),
+#             destfile=paste("../data/original/airbnb/190308/images/top-",i,"-",substr(n_alojamientos.url$host_name[i], start=1, stop=3),".jpg",sep=""),
+#             method = "wget")
+#     download.file(as.character(n_alojamientos.url$host_picture_url[i]),
+#             destfile=paste("../data/original/airbnb/190308/images/tophost-",i,".jpg",sep=""),
+#             method = "wget")
+# }
+
+
 # n_alojamientos <- data.frame(n_alojamientos[1:50,]) # crea data frame
 
 kable(n_alojamientos[1:50,2:4],caption = "Los 25 anfitriones con más alojamientos")
@@ -266,7 +290,7 @@ ggplot(data = n_alojamientos[1:25,] ,aes(x = reorder(host_name,alojamientos), y 
     plot.caption=element_text(size=9)
   ) +
   labs(title = "Número de alojamientos por anfitrión: top 25",
-       subtitle = "Septiembre 2018.",
+       subtitle = fecha_mes,
        y = "número de anuncios",
        x = "anfitriones",
        caption = caption_2) +
@@ -369,7 +393,7 @@ geom_polygon(data = barrios,
              color = "grey", fill="white", size = 0.1) +
 # geom_point(data= local_activo[local_activo$host_id %in% n_alojamientos[1:12,]$host_id,],
 #            aes(x=longitude, y=latitude),alpha=0.07,size = 0.3)+
-geom_point(data= local_activo[local_activo$host_id %in% n_alojamientos[1:12,]$host_id,],
+geom_point(data= local_activo[local_activo$host_id %in% n_alojamientos[1:10,]$host_id,],
          aes(x=longitude, y=latitude, color=room_type),alpha=0.3,size = 1) + #color="blue"
 # coord_quickmap(xlim=coord_x, ylim=coord_y)  +
   coord_fixed(xlim= coord_x,ylim=coord_y,ratio=1.3 ) +
@@ -383,20 +407,53 @@ theme(
   legend.position = "top",
   plot.caption=element_text(size=9)
 ) +
-labs(title=paste("Top 5 anfitriones según número alojamientos", sep = ""),
+labs(title=paste("Top 10 anfitriones según número alojamientos", sep = ""),
      subtitle = paste(local_activo_name,". ",fecha_mes,sep = ""),
-     caption = caption_2)  +
+     caption = caption_2,
+     fill= "tipo de alojamiento")  +
 guides(colour = guide_legend(override.aes = list(size=3))) +
-  facet_wrap(~host_id+host_name, labeller = label_wrap_gen(multi_line=FALSE))
+  facet_wrap(~host_id+host_name, labeller = label_wrap_gen(multi_line=FALSE), ncol = 5)
+
+
+ggplot() +
+geom_polygon(data = municipios,
+   aes(x = long, y = lat, group = group),
+   color = "grey", fill="white", size = 0.1) +
+geom_polygon(data = barrios,
+             aes(x = long, y = lat, group = group),
+             color = "grey", fill="white", size = 0.1) +
+# geom_point(data= local_activo[local_activo$host_id %in% n_alojamientos[1:12,]$host_id,],
+#            aes(x=longitude, y=latitude),alpha=0.07,size = 0.3)+
+geom_point(data= local_activo[local_activo$host_id %in% n_alojamientos[1:10,]$host_id,],
+         aes(x=longitude, y=latitude, color=room_type),alpha=0.3,size = 1) + #color="blue"
+# coord_quickmap(xlim=coord_x, ylim=coord_y)  +
+  coord_fixed(xlim= coord_x,ylim=coord_y,ratio=1.3 ) +
+theme_nothing(legend = TRUE) +
+theme_minimal(base_family = "Roboto Condensed", base_size = 12) +
+theme(
+  panel.grid = element_blank(),
+  axis.title = element_blank(),
+  axis.text = element_blank(),
+  panel.background = element_rect(fill="#EEEEFF",color = "grey",size = 0.25),
+  legend.position = "top",
+  plot.caption=element_text(size=9)
+) +
+labs(title=paste("Top 10 anfitriones según número alojamientos", sep = ""),
+     subtitle = paste(local_activo_name,". ",fecha_mes,sep = ""),
+     caption = caption_2,
+     fill= "tipo de alojamiento")  +
+guides(colour = guide_legend(override.aes = list(size=3))) +
+  facet_wrap(~host_name, labeller = label_wrap_gen(multi_line=FALSE), ncol = 5)
 
 ```
 
 ```{r anfitriones_map_toploop, echo = FALSE, warning=FALSE, eval=TRUE}
+# loop to create maps of top hosts
 # for (i in 1:16) {
 #   j <- as.character(i)
 #   if (i < 10) { j <- paste(0,as.character(i),sep="") }
 # 
-#   png(filename=paste("images/airbnb/hosts/top",j,"-hosts-bcn-092018.png", sep = ""), width = 300, height = 190 )
+#   png(filename=paste("images/airbnb/hosts/201903_top",j,"-hosts-bcn.png", sep = ""), width = 300, height = 190 )
 #     p1 <- ggplot() +
 #     geom_polygon(data = municipios,
 #            aes(x = long, y = lat, group = group),
@@ -408,7 +465,7 @@ guides(colour = guide_legend(override.aes = list(size=3))) +
 #     #            aes(x=longitude, y=latitude),alpha=0.02,size = 0.3)+
 #     geom_point(data= local_activo[local_activo$host_id %in% n_alojamientos[i,]$host_id,],
 #              aes(x=longitude, y=latitude, color=room_type),alpha=0.5,size = 1.2) + #color="blue"
-#     coord_fixed(xlim= coord_x,ylim=coord_y,ratio=1.3 ) + 
+#     coord_fixed(xlim= coord_x,ylim=coord_y,ratio=1.3 ) +
 #     # coord_quickmap(xlim=coord_x, ylim=coord_y)  +
 #     theme_nothing(legend = TRUE) +
 #     theme_minimal(base_family = "Roboto Condensed", base_size = 12) +
@@ -428,7 +485,7 @@ guides(colour = guide_legend(override.aes = list(size=3))) +
 #   dev.off()
 # }
 
-# luego con imagemagick hacer mosaico
+# luego con imagemagick hacer mosaico desde bash
 # montage top* -geometry +4+3 top-hosts-bcn-092018-airbnb.png
 ```
 
@@ -458,7 +515,8 @@ labs(
   subtitle = paste(local_activo[host_id %in% n_alojamientos[1,],]$host_name,"tienen",
                    nrow(local_activo[host_id %in% n_alojamientos[1,]$host_id,]), #Revisar   
                    " alojamientos en ", local_activo_name,  sep = " "),
-  caption = caption_2
+  caption = caption_2,
+     fill= "tipo de alojamiento"
   ) +
   guides(colour = guide_legend(override.aes = list(size=3))) 
 ```
@@ -487,7 +545,8 @@ labs(
   title=paste("Cada punto es un alojamiento del top 2 de anfitriones según alojamientos", sep = ""),
   subtitle = paste(nrow(local_activo[host_id %in% n_alojamientos[2,]$host_id,]),
                    " alojamientos en ", local_activo_name,  sep = ""),
-  caption = caption_2
+  caption = caption_2,
+     fill= "tipo de alojamiento"
   ) +guides(colour = guide_legend(override.aes = list(size=3))) 
 ```
 
@@ -515,7 +574,8 @@ labs(
   title=paste("Cada punto es un alojamiento del top 3 de anfitriones según alojamientos", sep = ""),
   subtitle = paste(nrow(local_activo[host_id %in% n_alojamientos[3,]$host_id,]),
                    " alojamientos en ", local_activo_name,  sep = ""),
-  caption = caption_2
+  caption = caption_2,
+     fill= "tipo de alojamiento"
   ) +guides(colour = guide_legend(override.aes = list(size=3))) 
 ```
 
@@ -543,7 +603,8 @@ labs(
   title=paste("Cada punto es un alojamiento del top 4 de anfitriones según alojamientos", sep = ""),
   subtitle = paste(nrow(local_activo[host_id %in% n_alojamientos[4,]$host_id,]),
                    " alojamientos en ", local_activo_name,  sep = ""),
-  caption = caption_2
+  caption = caption_2,
+     fill= "tipo de alojamiento"
   ) +
 guides(colour = guide_legend(override.aes = list(size=3))) 
 ```
@@ -572,7 +633,8 @@ labs(
   title=paste("Cada punto es un alojamiento del top 5 de anfitriones según alojamientos", sep = ""),
   subtitle = paste(nrow(local_activo[host_id %in% n_alojamientos[5,]$host_id,]),
                    " alojamientos en ", local_activo_name,  sep = ""),
-  caption = caption_2
+  caption = caption_2,
+     fill= "tipo de alojamiento"
   ) +
 guides(colour = guide_legend(override.aes = list(size=3))) 
 ```
