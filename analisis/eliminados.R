@@ -19,6 +19,27 @@ dates <- c("150430","150717","150904","151002","160103","161107","161208","17010
 # reverse dates to get the most recent data in the loop
 dates <- rev(dates)
 
+# no se usa en este script, ver evolucion.R
+# creates dataframe
+# todos <- ""
+# loop to insert every listing in every scraping in a row and add its scraping date
+# for (i in 1:length(dates)) {
+#   print(i)
+#   print(dates[i])
+#   # basic data
+#   # neo <- select(as.data.frame(read.delim(paste("data/original/airbnb/",dates[i],"/listings_summary_barcelona_insideairbnb.csv",sep=""),sep = ",")),
+#   #               id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
+#   # full data
+#   neo <- select(as.data.frame(read.delim(paste("data/original/airbnb/",dates[i],"/data/listings.csv.gz",sep=""),sep = ",")),
+#                 id,license,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_cleansed,neighbourhood_group_cleansed,number_of_reviews,availability_365)
+#   neo$date <- paste(dates[i],sep="")
+#   todos <- rbind(todos,neo)
+# }
+# 
+# # removes first empty line
+# todos <- todos[-1,]
+# head(todos)
+
 # Load data ------------------------------------------------------------------------
 
 # loop starts loading the first set of listings
@@ -27,9 +48,11 @@ dates <- rev(dates)
 #                     id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
 # full data listings
 # listings  <- read.delim("data/original/airbnb/190308/data/listings.csv.gz",sep = ",")
-listings  <- select(as.data.frame(read.delim("data/original/airbnb/190308/data/listings.csv.gz",sep = ",")),
+listings<- select(as.data.frame(read.delim("data/original/airbnb/190308/listings_summary_barcelona_insideairbnb.csv",sep = ",")),
                     id,room_type,calculated_host_listings_count,neighbourhood,neighbourhood_group,number_of_reviews,availability_365)
 
+# error <- as.data.frame(read.delim("data/original/airbnb/190308/data/listings.csv.gz",sep = ","))
+# names(error)
 
 listings.total <- listings
 
@@ -78,80 +101,85 @@ remove("neo","neo2")
 # Translate room type values
 levels(listings.total$room_type) <- c("Piso completo","Habitación","Habitación compartida")
 
-# removes first empty line
-todos <- todos[-1,]
-head(todos)
+# removes first empty line TODO> se sigue usando esto?
+# Creo que no se usa, pero sé en evolucion.R
+# todos <- listings.total
+# todos <- todos[-1,]
+# head(todos)
 
 # Translate room type values
-levels(todos$room_type) <- c("Piso completo","Habitación","Habitación compartida")
+# levels(todos$room_type) <- c("Piso completo","Habitación","Habitación compartida")
 # converts to integer
-todos$calculated_host_listings_count <- as.integer(todos$calculated_host_listings_count)
-todos$number_of_reviews <- as.integer(todos$number_of_reviews)
-todos$availability_365 <- as.integer(todos$availability_365)
+# todos$calculated_host_listings_count <- as.integer(todos$calculated_host_listings_count)
+# todos$number_of_reviews <- as.integer(todos$number_of_reviews)
+# todos$availability_365 <- as.integer(todos$availability_365)
 
-# saves the file in data_long dataframe, which was the previous way of doing this
-data_long <- todos
-# data_long$fechab <- strapplyc( as.character(data_long$date), "([0-9]*)", simplify = TRUE)
-data_long$fechab <- as.Date( paste(20,as.character(data_long$date),sep=""), "%Y%m%d")
-
-# table(data_long$calculated_host_listings_count)
-
-# converts to long format deprecated method, used later TODO document) ------------------------------------------------------------------------------
-data_long <- listings.total %>% gather(fecha, exists, 8:39) #starts in 8th column after other variables
-# parse date: extract date from variable and parse it. Adds "20" to have full year.
-data_long$fechab <- strapplyc( as.character(data_long$fecha), "d([0-9]*)", simplify = TRUE)
-data_long$fechab <- as.Date( paste(20,as.character(data_long$fechab),sep=""), "%Y%m%d")
-
-# has license
-data_long$has.license <- "sin licencia"
-data_long[data_long$license != "",]$has.license <- "con licencia"
-
-# classify by type of host ----------------------------------------------------------------------------
-data_long$host.type <- ""
-data_long[data_long$calculated_host_listings_count == 1,]$host.type <- "1 anuncio"
-data_long[data_long$calculated_host_listings_count > 1,]$host.type <- "varios anuncios"
-
+# # saves the data in the data_long dataframe that was used, which was the previous way of doing this
+# data_long <- todos
+# # data_long$fechab <- strapplyc( as.character(data_long$date), "([0-9]*)", simplify = TRUE)
+# data_long$fechab <- as.Date( paste(20,as.character(data_long$date),sep=""), "%Y%m%d")
+# 
+# # table(data_long$calculated_host_listings_count)
+# 
+# # converts to long format deprecated method, used later TODO document) ------------------------------------------------------------------------------
+# data_long <- listings.total %>% gather(fecha, exists, 8:39) #starts in 8th column after other variables
+# # parse date: extract date from variable and parse it. Adds "20" to have full year.
+# data_long$fechab <- strapplyc( as.character(data_long$fecha), "d([0-9]*)", simplify = TRUE)
+# data_long$fechab <- as.Date( paste(20,as.character(data_long$fechab),sep=""), "%Y%m%d")
+# 
+# # has license
+# data_long$has.license <- "sin licencia"
+# data_long[data_long$license != "",]$has.license <- "con licencia"
+# 
+# # classify by type of host ----------------------------------------------------------------------------
+# data_long$host.type <- ""
+# data_long[data_long$calculated_host_listings_count == 1,]$host.type <- "1 anuncio"
+# data_long[data_long$calculated_host_listings_count > 1,]$host.type <- "varios anuncios"
+# 
+# # data_long$host.type.m <- ""
+# # data_long[data_long$calculated_host_listings_count == 1,]$host.type.m <- "1 anuncio"
+# # data_long[data_long$calculated_host_listings_count == 2,]$host.type.m <- "2 anuncios"
+# # data_long[data_long$calculated_host_listings_count == 3,]$host.type.m <- "3 anuncios"
+# # data_long[data_long$calculated_host_listings_count == 4,]$host.type.m <- "4 anuncios"
+# # data_long[data_long$calculated_host_listings_count > 4,]$host.type.m <- "5 o más anuncios"
+# 
 # data_long$host.type.m <- ""
 # data_long[data_long$calculated_host_listings_count == 1,]$host.type.m <- "1 anuncio"
 # data_long[data_long$calculated_host_listings_count == 2,]$host.type.m <- "2 anuncios"
-# data_long[data_long$calculated_host_listings_count == 3,]$host.type.m <- "3 anuncios"
-# data_long[data_long$calculated_host_listings_count == 4,]$host.type.m <- "4 anuncios"
-# data_long[data_long$calculated_host_listings_count > 4,]$host.type.m <- "5 o más anuncios"
-
-data_long$host.type.m <- ""
-data_long[data_long$calculated_host_listings_count == 1,]$host.type.m <- "1 anuncio"
-data_long[data_long$calculated_host_listings_count == 2,]$host.type.m <- "2 anuncios"
-data_long[data_long$calculated_host_listings_count > 2 & data_long$calculated_host_listings_count < 6,]$host.type.m <- "3-5 anuncios"
-data_long[data_long$calculated_host_listings_count > 5 & data_long$calculated_host_listings_count < 15,]$host.type.m <- "6-14 anuncios"
-data_long[data_long$calculated_host_listings_count > 14,]$host.type.m <- "15 o más anuncios"
-
-# review type -------------------------
-data_long$reviews.type <- ""
-data_long[data_long$number_of_reviews == 0 & !is.na(data_long$availability_365) ,]$reviews.type <- "ninguna review"
-data_long[data_long$number_of_reviews > 0 & !is.na(data_long$availability_365),]$reviews.type <- "1 o más reviews"
-# data_long[data_long$number_of_reviews ==1,]$reviews.type <- "1"
-# data_long[data_long$number_of_reviews > 1,]$reviews.type <- "2 o más"
-
-# availability type -------------------------
-data_long$availability.type <- ""
-data_long[data_long$availability_365 == 0 & !is.na(data_long$availability_365),]$availability.type <- "ningún día"
-data_long[data_long$availability_365 > 0 & data_long$availability_365 <31 & !is.na(data_long$availability_365),]$availability.type <- "0-30 días"
-data_long[data_long$availability_365 > 30 & data_long$availability_365 <91 & !is.na(data_long$availability_365),]$availability.type <- "31-90 días"
-data_long[data_long$availability_365 > 90 & data_long$availability_365 <181 & !is.na(data_long$availability_365),]$availability.type <- "91-180 días"
-data_long[data_long$availability_365 > 180 & !is.na(data_long$availability_365),]$availability.type <- "180 o más días"
-
-data_long$availability.type.s <- ""
-data_long[data_long$availability_365 == 0 & !is.na(data_long$availability_365),]$availability.type.s <- "ningún día"
-data_long[data_long$availability_365 > 0 & !is.na(data_long$availability_365),]$availability.type.s <- "con alguna disponibilidad"
-
-# roomtype simplified
-data_long$room_type.s <- data_long$room_type
-data_long[data_long$room_type == "Habitación compartida", ]$room_type.s <- "Habitación"
-
-
+# data_long[data_long$calculated_host_listings_count > 2 & data_long$calculated_host_listings_count < 6,]$host.type.m <- "3-5 anuncios"
+# data_long[data_long$calculated_host_listings_count > 5 & data_long$calculated_host_listings_count < 15,]$host.type.m <- "6-14 anuncios"
+# data_long[data_long$calculated_host_listings_count > 14,]$host.type.m <- "15 o más anuncios"
+# 
+# # review type -------------------------
+# data_long$reviews.type <- ""
+# data_long[data_long$number_of_reviews == 0 & !is.na(data_long$availability_365) ,]$reviews.type <- "ninguna review"
+# data_long[data_long$number_of_reviews > 0 & !is.na(data_long$availability_365),]$reviews.type <- "1 o más reviews"
+# # data_long[data_long$number_of_reviews ==1,]$reviews.type <- "1"
+# # data_long[data_long$number_of_reviews > 1,]$reviews.type <- "2 o más"
+# 
+# # availability type -------------------------
+# data_long$availability.type <- ""
+# data_long[data_long$availability_365 == 0 & !is.na(data_long$availability_365),]$availability.type <- "ningún día"
+# data_long[data_long$availability_365 > 0 & data_long$availability_365 <31 & !is.na(data_long$availability_365),]$availability.type <- "0-30 días"
+# data_long[data_long$availability_365 > 30 & data_long$availability_365 <91 & !is.na(data_long$availability_365),]$availability.type <- "31-90 días"
+# data_long[data_long$availability_365 > 90 & data_long$availability_365 <181 & !is.na(data_long$availability_365),]$availability.type <- "91-180 días"
+# data_long[data_long$availability_365 > 180 & !is.na(data_long$availability_365),]$availability.type <- "180 o más días"
+# 
+# data_long$availability.type.s <- ""
+# data_long[data_long$availability_365 == 0 & !is.na(data_long$availability_365),]$availability.type.s <- "ningún día"
+# data_long[data_long$availability_365 > 0 & !is.na(data_long$availability_365),]$availability.type.s <- "con alguna disponibilidad"
+# 
+# # roomtype simplified
+# data_long$room_type.s <- data_long$room_type
+# data_long[data_long$room_type == "Habitación compartida", ]$room_type.s <- "Habitación"
 
 # detects which listings were erased/dissapeared -------------------------------------------------------------------------------
 listings.desaparecidos <- listings.total
+
+# save data to avoid recalculating every time
+# save(listings.desaparecidos,file="tmp/listings.desaparecidos.Rda")
+# save(listings.total,file="tmp/listings.total.Rda")
+
 # sets all values to 0
 listings.desaparecidos[,8:39] <- 0
 
@@ -162,9 +190,9 @@ listings.desaparecidos[,8:39] <- 0
 # listings.desaparecidos[listings.desaparecidos$id %in% tesx$id,column.select2] <-33
 
 for (i in 1:length(dates)) {
-  print(i)
+  print(paste0("current i=",i))
   column.select <- paste("d",dates[i],sep = "")
-  print(column.select)
+  print(paste0("current column select=",column.select))
   column.select2 <- paste("d",dates[i+1],sep = "")
   print(column.select2)
   # debe cumplir condición: está en columna 1 pero no está en 2
@@ -182,7 +210,7 @@ table(listings.desaparecidos$sum)
 # 2.325 (4%) desparecieron entre 3 y 7 veces.
 
 # ¿cuántos anuncios desparecieron en junio y luego volvieron a desaperecer? 198
-filter(listings.desaparecidos, d180609 == 1 & (d180710 == 1 | d180818 == 1 | d180911  == 1) ) %>% select(room_type,calculated_host_listings_count,d180710,d180818,d180911 )
+filter(listings.desaparecidos, d180609 == 1 & (d180710 == 1 | d180814 == 1 | d180911  == 1) ) %>% select(room_type,calculated_host_listings_count,d180710,d180814,d180911 )
 
 # converts to long format -----
 listings.desaparecidos_long <-  listings.desaparecidos %>% gather(fecha, eliminated, 8:39) #starts in 4th column after other variables
@@ -633,7 +661,8 @@ write.csv(nodes, file="temp/nodes-listings-post-2017.csv")
 
 # Analyses ony Entire home/apartment ads --------
 listings.total.all <- listings.total # saves original
-listings.total <- filter(listings.total.all,room_type == "Piso completo") #only entire homes
+# SELECTS only entire homes
+listings.total <- filter(listings.total.all,room_type == "Piso completo") 
 
 
 # Creates matrix
@@ -656,7 +685,7 @@ for (j in 1:length(dates)) {
   }
 }
 
-write.csv(heat.matrix, file="temp/heat.matrix.csv")
+write.csv(heat.matrix, file="tmp/heat.matrix.csv")
 
 # basic heatmap
 image(as.matrix(heat.matrix), xlab = 'Matrix rows', ylab = 'Matrix columns', axes = F)
@@ -716,7 +745,7 @@ for (j in 1:length(dates.p)) {
   }
 }
 
-write.csv(heat.matrix.p, file="temp/heat.matrix.p.csv")
+write.csv(heat.matrix.p, file="tmp/heat.matrix.p.csv")
 
 # basic heatmap
 image(as.matrix(heat.matrix.p), xlab = 'Matrix rows', ylab = 'Matrix columns', axes = F)
@@ -880,6 +909,9 @@ ggplot(heat.matrix.n.m.p, aes(x = date, y = value, group = id,color=variable)) +
 dev.off()
 
 # Líneas: coincidencia en % de anuncios de pisos completos entre bases de datos de Airbnb --------------------
+# creates fake df
+df <- data.frame(x1 = 1, x2 = 1, y1 = 3, y2 = 5)
+
 png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos.png", sep = ""),width = 1000,height = 500)
 ggplot() + 
   # lines
@@ -894,6 +926,219 @@ ggplot() +
   geom_point(data=filter(heat.matrix.n.m.p,id=="180514"), aes(x = date, y = value), size=2,color="#bb9999") +
   # mete % en cada punto de mayo
   geom_text(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-01-01") & date < as.Date("2018-09-01")),
+            aes(x = date+10, y = value+3,label=paste(value,"%",sep="")),size=5,family = "Roboto Condensed")+
+  # fechas de scrapings
+  geom_text(data=filter(heat.matrix.n.m.p, value ==100 ),
+            aes(x = date, y = 41,label=date),
+            size=5,family = "Roboto Condensed",angle = 90,color ="#333333" )+
+  # colors
+  scale_fill_manual(values = getPalette(colourCount)) +
+  # scale
+  scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y") +
+  # anotations
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  annotate("text",x=as.Date("2018-05-26"),y=57,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
+  annotate("text",x=as.Date("2018-06-1"),y=87,label="El 29% desapareció",color="#000000",size=5,hjust=0,family = "Roboto Condensed") +
+  # nota 71%
+  annotate(geom = "text", x = as.Date("2018-01-1"), y = 55, label = "El 71% de los anuncios de mayo seguía en junio", 
+           family = "Roboto Condensed", hjust = 1,size=6) +
+  geom_curve(aes(x = as.Date("2018-01-1"), y = 55, xend = as.Date("2018-06-6"), yend = 70.5), 
+             color="#333333", data=df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+  ) +
+  # nota fecha de scraping
+  annotate(geom = "text", x = as.Date("2018-01-1"), y = 103, label = "Fecha del scraping de mayo 2018", 
+           family = "Roboto Condensed", hjust = 1,size=6) +
+  geom_curve(aes(x = as.Date("2018-01-1"), y = 100, xend = as.Date("2018-05-10"), yend = 100), 
+             color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+  ) +
+  # theme
+  theme_minimal(base_family = "Roboto Condensed",base_size = 25) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major = element_line(size=0.6),
+    panel.grid.major.x = element_blank(),
+    # panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_blank()
+    # axis.text.x = element_text(angle = 90, vjust = 0.4)
+  ) +
+  labs(title = "Porcentaje de pisos completos de Airbnb entre scrapings de InsideAirbnb",
+       subtitle = "Cada línea es un scraping. 2016-2018. Barcelona",
+       y = "% coincidencia entre scrapings",
+       x = "fecha",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
+
+# Explicación 01 -------
+heat.matrix.m.p$date <- as.Date( paste(20,as.character(heat.matrix.n.m.p$variable),sep=""), "%Y%m%d")
+
+png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos_01.png", sep = ""),width = 1000,height = 500)
+ggplot(heat.matrix.m.p , aes(x = date, y = value, group = id),fill="#bbbbbb") +
+  annotate("text",x=as.Date("2018-05-28"),y=4000,label="acuerdo",color="#000000",size=5,hjust=1,family = "Roboto Condensed") +
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  # geom_line() +
+  # geom_point(size=0.5) +
+  # geom_text(aes(label=value),size=3,color="#000000") +
+  # geom_line(heat.matrix.m.p , aes(x = id, y = value, group = variable)) +
+  # line destacada
+  geom_line(data=filter(heat.matrix.m.p,id=="180514"), aes(x = date, y = value, group =id),color="#ddbbbb",size=2) +
+  # line destacada
+  # geom_line(data=filter(heat.matrix.n.m.p,id=="180818"), aes(x = date, y = value, group = id),color="#bbddbb",size=2) +
+  # points
+  # geom_point(data=heat.matrix.n.m.p, aes(x = date, y = value), size=1,color="#bbbbbb") +
+  # destaca puntos mayo
+  geom_point(data=filter(heat.matrix.m.p,id=="180514"), aes(x = date, y = value), size=2,color="#bb9999") +
+  # mete n en cada punto de mayo
+  geom_text( data=filter(heat.matrix.m.p, id=="180514"),
+             aes(x = date,
+                 y = value+180,
+                 angle = 90,
+                 label=format(value, big.mark = ".", scientific = FALSE),
+                 family = "Roboto Condensed"),
+                 size=4,
+                  hjust=0
+             
+             )+
+  
+  # geom_text_repel( 
+  #     data=filter(heat.matrix.m.p, id=="180514"),
+  #                 aes(x = date, 
+  #                     y = value,
+  #                     label=format(value, big.mark = ".", scientific = FALSE)), 
+  #                 # nudge_x = 35, # adjust the starting y position of the text label
+  #                 size=4,
+  #                 hjust=0,
+  #                 family = "Roboto Condensed",
+  #                 direction="x"
+  # ) +
+  
+  # fechas de scrapings
+  geom_text(data=filter(heat.matrix.n.m.p, value ==100 ),
+  aes(x = date, y = 501,label=date),
+  size=5,family = "Roboto Condensed",angle = 90,color ="#333333" )+
+  # colors
+  scale_fill_manual(values = getPalette(colourCount)) +
+  # scale
+  # scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE),limits = c(0, max(heat.matrix.m.p$value+400))) +
+  # anotations
+  # geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  # annotate("text",x=as.Date("2018-05-26"),y=57,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
+  # annotate("text",x=as.Date("2018-06-1"),y=87,label="El 29% desapareció",color="#000000",size=5,hjust=0,family = "Roboto Condensed") +
+  # nota 71%
+  # annotate(geom = "text", x = as.Date("2018-01-1"), y = 55, label = "El 71% de los anuncios de mayo seguía en junio", 
+  #          family = "Roboto Condensed", hjust = 1,size=6) +
+  # geom_curve(aes(x = as.Date("2018-01-1"), y = 55, xend = as.Date("2018-06-6"), yend = 70.5), 
+  #            color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+# ) +
+# nota fecha de scraping
+# annotate(geom = "text", x = as.Date("2018-01-1"), y = 103, label = "Fecha del scraping de mayo 2018", 
+#          family = "Roboto Condensed", hjust = 1,size=6) +
+# geom_curve(aes(x = as.Date("2018-01-1"), y = 100, xend = as.Date("2018-05-10"), yend = 100), 
+#            color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+# ) +
+# theme
+theme_minimal(base_family = "Roboto Condensed",base_size = 20) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major = element_line(size=0.6),
+    panel.grid.major.x = element_blank(),
+    # panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_blank()
+    # axis.text.x = element_text(angle = 90, vjust = 0.4)
+  ) +
+  labs(title = "Número de pisos completos coincidentes de Airbnb entre scrapings de InsideAirbnb",
+       subtitle = "Mayo 2018. Barcelona",
+       y = "nº pisos completos",
+       x = "fecha scraping",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
+
+# Explicación 02a: Líneas: coincidencia en % de anuncios de pisos completos entre bases de datos de Airbnb explicación--------------------
+png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos_02a.png", sep = ""),width = 1000,height = 500)
+ggplot() + 
+  # lines
+  # geom_line(data=heat.matrix.n.m.p, aes(x = date, y = value, group = id),color="#bbbbbb") +
+  # line destacada
+  geom_line(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-05-01")), 
+            aes(x = date, y = value, group =id),color="#ddbbbb",size=2) +
+  # line destacada
+  # geom_line(data=filter(heat.matrix.n.m.p,id=="180818"), aes(x = date, y = value, group = id),color="#bbddbb",size=2) +
+  # points
+  # geom_point(data=heat.matrix.n.m.p, aes(x = date, y = value), size=1,color="#bbbbbb") +
+  # destaca puntos mayo
+  geom_point(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-05-01")), 
+             aes(x = date, y = value), size=2,color="#bb9999") +
+  # mete % en cada punto de mayo
+  geom_text(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-01-01") & date < as.Date("2018-10-30")),
+            aes(x = date+2, y = value+3,label=paste(value,"%",sep="")),size=5,family = "Roboto Condensed")+
+  # fechas de scrapings
+  geom_text(data=filter(heat.matrix.n.m.p, value ==100 ),
+            aes(x = date, y = 0,label=date),
+            hjust = 0,
+            size=5,family = "Roboto Condensed",angle = 90,color ="#333333" )+
+  # colors
+  scale_fill_manual(values = getPalette(colourCount)) +
+  # scale
+  scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y", limits = c(as.Date("2018-05-01"),as.Date("2018-10-30"))) +
+  ylim(0,100) +
+  # anotations
+  geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
+  annotate("text",x=as.Date("2018-05-26"),y=57,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
+  annotate("text",x=as.Date("2018-06-1"),y=87,label="El 29% desapareció",color="#000000",size=5,hjust=0,family = "Roboto Condensed") +
+  # nota 71%
+  annotate(geom = "text", x = as.Date("2018-01-1"), y = 55, label = "El 71% de los anuncios de mayo seguía en junio", 
+           family = "Roboto Condensed", hjust = 1,size=6) +
+  geom_curve(aes(x = as.Date("2018-01-1"), y = 55, xend = as.Date("2018-06-6"), yend = 70.5), 
+             color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+  ) +
+  # nota fecha de scraping
+  annotate(geom = "text", x = as.Date("2018-01-1"), y = 103, label = "Fecha del scraping de mayo 2018", 
+           family = "Roboto Condensed", hjust = 1,size=6) +
+  geom_curve(aes(x = as.Date("2018-01-1"), y = 100, xend = as.Date("2018-05-10"), yend = 100), 
+             color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
+  ) +
+  # theme
+  theme_minimal(base_family = "Roboto Condensed",base_size = 20) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major = element_line(size=0.6),
+    panel.grid.major.x = element_blank(),
+    # panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_blank()
+    # axis.text.x = element_text(angle = 90, vjust = 0.4)
+  ) +
+  labs(title = "Porcentaje de pisos completos de Airbnb entre scrapings de InsideAirbnb",
+       subtitle = "Mayo 2018. Barcelona",
+       y = "% coincidencia entre scrapings",
+       x = "fecha",
+       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
+dev.off()
+
+# creates variable from id to date
+heat.matrix.n.m.p$iddate <- as.Date( paste(20,as.character(heat.matrix.n.m.p$id),sep=""), "%Y%m%d")
+# only display if date is higher than id date 
+heat.matrix.n.m.p$display <- ifelse(heat.matrix.n.m.p$date > heat.matrix.n.m.p$iddate | heat.matrix.n.m.p$date == heat.matrix.n.m.p$iddate , 1, 0 )
+
+# Explicación 02b: Líneas: coincidencia en % de anuncios de pisos completos entre bases de datos de Airbnb explicación--------------------
+png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos_02b.png", sep = ""),width = 1000,height = 500)
+ggplot() + 
+  # lines
+  geom_line(data=filter(heat.matrix.n.m.p, display==1), 
+            aes(x = date, y = value, group = id),color="#bbbbbb") +
+  # line destacada
+  geom_line(data=filter(heat.matrix.n.m.p,id=="180514" & display==1), 
+            aes(x = date, y = value, group =id),color="#ddbbbb",size=2) +
+  # line destacada
+  # geom_line(data=filter(heat.matrix.n.m.p,id=="180818"), aes(x = date, y = value, group = id),color="#bbddbb",size=2) +
+  # points
+  # geom_point(data=heat.matrix.n.m.p, aes(x = date, y = value), size=1,color="#bbbbbb") +
+  # destaca puntos mayo
+  geom_point(data=filter(heat.matrix.n.m.p,id=="180514" & display==1), aes(x = date, y = value), size=2,color="#bb9999") +
+  # mete % en cada punto de mayo
+  geom_text(data=filter(heat.matrix.n.m.p,id=="180514" & date > as.Date("2018-01-01") & date < as.Date("2018-09-01")  & display==1),
             aes(x = date+10, y = value+3,label=paste(value,"%",sep="")),size=5,family = "Roboto Condensed")+
   # fechas de scrapings
   geom_text(data=filter(heat.matrix.n.m.p, value ==100 ),
@@ -931,76 +1176,12 @@ ggplot() +
     # axis.text.x = element_text(angle = 90, vjust = 0.4)
   ) +
   labs(title = "Porcentaje de pisos completos de Airbnb entre scrapings de InsideAirbnb",
-       subtitle = "Cada línea es un scraping. 2016-2018. Barcelona",
-       y = "% coincidencia entre scrapings",
-       x = "fecha",
-       caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
-dev.off()
-
-# Explicación 01 -------
-heat.matrix.m.p$date <- as.Date( paste(20,as.character(heat.matrix.n.m.p$variable),sep=""), "%Y%m%d")
-
-png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos_01.png", sep = ""),width = 1000,height = 500)
-ggplot(heat.matrix.m.p , aes(x = date, y = value, group = id),fill="#bbbbbb") +
-  # geom_line() +
-  # geom_point(size=0.5) +
-  # geom_text(aes(label=value),size=3,color="#000000") +
-  # geom_line(heat.matrix.m.p , aes(x = id, y = value, group = variable)) +
-  # line destacada
-  geom_line(data=filter(heat.matrix.m.p,id=="180514"), aes(x = date, y = value, group =id),color="#ddbbbb",size=2) +
-  # line destacada
-  # geom_line(data=filter(heat.matrix.n.m.p,id=="180818"), aes(x = date, y = value, group = id),color="#bbddbb",size=2) +
-  # points
-  # geom_point(data=heat.matrix.n.m.p, aes(x = date, y = value), size=1,color="#bbbbbb") +
-  # destaca puntos mayo
-  geom_point(data=filter(heat.matrix.m.p,id=="180514"), aes(x = date, y = value), size=2,color="#bb9999") +
-  # mete n en cada punto de mayo
-  geom_text( data=filter(heat.matrix.m.p, id=="180514"),
-             aes(x = date, 
-                 y = value+100,
-                 label=value,
-                 family = "Roboto Condensed"),size=4 )+
-  # fechas de scrapings
-  # geom_text(data=filter(heat.matrix.n.m.p, value ==100 ),
-  # aes(x = date, y = 41,label=date),
-  # size=5,family = "Roboto Condensed",angle = 90,color ="#333333" )+
-  # colors
-  scale_fill_manual(values = getPalette(colourCount)) +
-  # scale
-  # scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y") +
-  # anotations
-  # geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  # annotate("text",x=as.Date("2018-05-26"),y=57,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
-  # annotate("text",x=as.Date("2018-06-1"),y=87,label="El 29% desapareció",color="#000000",size=5,hjust=0,family = "Roboto Condensed") +
-  # nota 71%
-  # annotate(geom = "text", x = as.Date("2018-01-1"), y = 55, label = "El 71% de los anuncios de mayo seguía en junio", 
-  #          family = "Roboto Condensed", hjust = 1,size=6) +
-  # geom_curve(aes(x = as.Date("2018-01-1"), y = 55, xend = as.Date("2018-06-6"), yend = 70.5), 
-  #            color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
-# ) +
-# nota fecha de scraping
-# annotate(geom = "text", x = as.Date("2018-01-1"), y = 103, label = "Fecha del scraping de mayo 2018", 
-#          family = "Roboto Condensed", hjust = 1,size=6) +
-# geom_curve(aes(x = as.Date("2018-01-1"), y = 100, xend = as.Date("2018-05-10"), yend = 100), 
-#            color="#333333", data =df,  curvature = 0.2, arrow = arrow(length = unit(0.03, "npc"))
-# ) +
-# theme
-theme_minimal(base_family = "Roboto Condensed",base_size = 25) +
-  theme(
-    panel.grid.minor.x = element_blank(),
-    panel.grid.major = element_line(size=0.6),
-    panel.grid.major.x = element_blank(),
-    # panel.grid.major.x = element_blank(),
-    legend.position = "right",
-    axis.text.x = element_blank()
-    # axis.text.x = element_text(angle = 90, vjust = 0.4)
-  ) +
-  labs(title = "Número de pisos completos coincidentes de Airbnb entre scrapings de InsideAirbnb",
        subtitle = "Mayo 2018. Barcelona",
        y = "% coincidencia entre scrapings",
-       x = "fecha",
+       x = "",
        caption = "Datos: InsideAirbnb. Gráfico: lab.montera34.com/airbnb")
 dev.off()
+
 
 # Explicación 02: Líneas: coincidencia en % de anuncios de pisos completos entre bases de datos de Airbnb explicación--------------------
 png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos_02.png", sep = ""),width = 1000,height = 500)
