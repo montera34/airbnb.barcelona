@@ -1126,7 +1126,7 @@ heat.matrix.n.m.p$display <- ifelse(heat.matrix.n.m.p$date > heat.matrix.n.m.p$i
 png(filename=paste("images/airbnb/eliminados/lineas-coincidencias-barcelona-insideairbnb-03-normalizad-pisos-completos_02b.png", sep = ""),width = 1000,height = 500)
 ggplot() + 
   # lines
-  geom_line(data=filter(heat.matrix.n.m.p, display==1), 
+  geom_line(data=filter(heat.matrix.n.m.p, display==1 & iddate > as.Date("2016-11-01")), 
             aes(x = date, y = value, group = id),color="#bbbbbb") +
   # line destacada
   geom_line(data=filter(heat.matrix.n.m.p,id=="180514" & display==1), 
@@ -1142,15 +1142,17 @@ ggplot() +
             aes(x = date+10, y = value+3,label=paste(value,"%",sep="")),size=5,family = "Roboto Condensed")+
   # fechas de scrapings
   geom_text(data=filter(heat.matrix.n.m.p, value ==100 ),
-            aes(x = date, y = 41,label=date),
+            aes(x = date, y = 0,label=date),
+            hjust=0,
             size=5,family = "Roboto Condensed",angle = 90,color ="#333333" )+
   # colors
   scale_fill_manual(values = getPalette(colourCount)) +
   # scale
-  scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y") +
+  scale_x_date(date_breaks = "2 month",date_labels = "%m-%Y", limits = c(as.Date("2016-11-01"),as.Date("2018-10-30"))) +
+  ylim(0,100) +
   # anotations
   geom_vline(xintercept=as.Date("2018-05-31"),size=0.5,linetype=2) +
-  annotate("text",x=as.Date("2018-05-26"),y=57,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
+  annotate("text",x=as.Date("2018-05-26"),y=35,label="acuerdo",color="#000000",size=5,hjust = 1,family = "Roboto Condensed") +
   annotate("text",x=as.Date("2018-06-1"),y=87,label="El 29% desapareció",color="#000000",size=5,hjust=0,family = "Roboto Condensed") +
   # nota 71%
   annotate(geom = "text", x = as.Date("2018-01-1"), y = 55, label = "El 71% de los anuncios de mayo seguía en junio", 
